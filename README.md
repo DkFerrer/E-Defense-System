@@ -1,46 +1,91 @@
-# Evaluation Module for E-DEFENSE SYSTEM
+Evaluation Module
 
-E-Defense is an integrated research defense management system developed for the University of Nueva Caceres. It addresses the institutional need to eliminate manual paperwork, reduce scheduling conflicts, and bridge communication gaps among students, research advisers, panel members, and administrators.
-The platform digitalizes the entire research defense lifecycle, from scheduling and panel assignments to post-evaluation consolidation. Enabling efficient management of thesis and capstone defense records across all academic units .
+## Overview
+
+The **Evaluation Module** is a core component of the **E-Defense System** developed for the **University of Nueva Caceres**. It is designed to digitize and standardize the assessment process for thesis and capstone research defense proceedings, replacing manual paper-based evaluation workflows with an automated, transparent, and auditable system.
+
+The module enables panel members to evaluate student research presentations using configurable rubrics aligned with institutional academic standards. It supports real-time scoring, automated computation of final grades, evaluator feedback collection, and centralized storage of evaluation results.
+
+The module ensures fairness, consistency, and accuracy in grading while reducing administrative workload and improving reporting efficiency for faculty, coordinators, and academic administrators.
+
+---
+
+## Features
+
+* Creation and management of evaluation rubrics and scoring criteria
+* Role-based evaluator access during scheduled defense sessions
+* Real-time scoring submission by panel members
+* Automated computation of final grades and weighted scores
+* Individual evaluator comments and recommendations recording
+* Pass/Fail determination based on configurable grading rules
+* Evaluation locking after submission to prevent unauthorized edits
+* Consolidated evaluation summary generation
+* Panel consensus and final decision recording
+* Automated notification of submitted evaluations
+* Exportable evaluation reports (PDF/print-ready format)
+* Historical evaluation records and audit trail tracking
+* Integration with Scheduling Module for session-based evaluation access
+
+---
+
+## Module Status
+
+**Under Development**
+
+---
+
+## Related Database Tables
+
+```
+USER
+EVALUATION
+EVALUATION_CRITERIA
+EVALUATION_RUBRIC
+EVALUATION_SCORE
+EVALUATION_RESULT
+EVALUATION_COMMENT
+DEFENSE_SESSION
+PANEL_MEMBER
+GRADE_SCALE
+FINAL_DECISION
+NOTIFICATION
+AUDIT_LOG
+```
+
+---
 
 ## Tech Stack
-- **Language:** PHP / JavaScript / Python
-- **Framework:** Laravel (Backend API) / React (Frontend)
-- **Database:** MySQL
 
-## Installation Guide
+**Language:** PHP / JavaScript
+**Framework:** Laravel (Backend API) / React (Frontend)
+**Database:** MySQL
 
-1. Clone the repository:
-```bash
-   git clone https://github.com/DkFerrer/E-Defense-System.git
-   cd e-defense
-```
-2. Install dependencies:
-```bash
-   composer install       
-   npm install            
-   pip install -r requirements.txt   
-```
-3. Set up environment variables — copy .env.example to .env and fill in values.
-4. Run the application:
-```bash
-   php artisan serve      
-   npm run dev            
+**Architecture:**
+Composable layered architecture with API Gateway and microservices:
+
+* Evaluation Service
+* Rubric Management Service
+* Access Control Service
+* Notification Service
+
+---
+
+## Branch
+
+This module is developed under:
+
 ```
 
-## Module Repositories
-| Module | Repository | Developer |
-|--------|-----------|-----------|
-| Scheduling Module | [Link](https://github.com/learoncesvalles/Scheduling-Module) | Lea Roncesvalles |
-| Evaluation Module | [Link](https://github.com/asa_jannamae/Evaluation-Module) | Janna Mae Asa |
-| Post-Evaluation Module | [Link](https://github.com/Aandreyjiwoo/Post-Evaluation-Module) | Andrey Quintela |
-| Monitoring & Notification Module | [Link](https://github.com/thalia-me/Monitoring-Module) | Dalia Mae Miralles |
+---
 
-## Contributors
-| Name | Role |
-|------|------|
-|Lea Roncesvalles  | Developer / Project Manager |
-|Janna Mae Asa     | Frontend Developer / UI-UX Designer |
-|Andrey Quintela   | Backend Developer / Database Engineer |
-|Dalia Mae Miralles| Developer / Documentation Specialist |
+## Main System Repository
 
+This module is part of the **E-Defense System**.
+
+---
+
+## Developer
+
+| Name                | Role                                          |
+| ------------------- | --------------------------------------------- |
+| Janna Mae Asa| Frontend Developer / UI-UX Designer|
