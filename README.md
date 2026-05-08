@@ -26,17 +26,17 @@ The module ensures fairness, consistency, and accuracy in grading while reducing
 * Historical evaluation records and audit trail tracking
 * Integration with Scheduling Module for session-based evaluation access
 
----
+
 
 ## Module Status
 
 **Under Development**
 
----
+
 
 ## Related Database Tables
 
-```
+
 USER
 EVALUATION
 EVALUATION_CRITERIA
@@ -50,9 +50,6 @@ GRADE_SCALE
 FINAL_DECISION
 NOTIFICATION
 AUDIT_LOG
-```
-
----
 
 ## Tech Stack
 
@@ -68,21 +65,19 @@ Composable layered architecture with API Gateway and microservices:
 * Access Control Service
 * Notification Service
 
----
+
 
 ## Branch
 
 This module is developed under:
 
-```
 
----
 
 ## Main System Repository
 
-This module is part of the [E-Defense System](https://github.com/DkFerrer/E-Defense-System).
+This module is part of the [E-Defense System]https://github.com/DkFerrer/E-Defense-System).
 
----
+
 
 ## Developer
 
