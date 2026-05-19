@@ -34,7 +34,7 @@ The platform digitalizes the entire research defense lifecycle, from scheduling 
 | Scheduling Module | [Link](https://github.com/learoncesvalles/Scheduling-Module) | Lea Roncesvalles |
 | Evaluation Module | [Link](https://github.com/asa_jannamae/Evaluation-Module) | Janna Mae Asa |
 | Post-Evaluation Module | [Link](https://github.com/Aandreyjiwoo/Post-Evaluation-Module) | Andrey Quintela |
-| Monitoring & Notification Module | [Link](https://github.com/thalia-me/Monitoring-Module) | Dalia Mae Miralles |
+| Monitoring & Notification Module | [Link](https://github.com/thalia-me/Monitoring-Notification-Module) | Dalia Mae Miralles |
 
 ## Contributors
 | Name | Role |
