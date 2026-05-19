@@ -1,46 +1,106 @@
-# E-DEFENSE SYSTEM FOR RESEARCH DEFENSES IN THE UNIVERSITY OF NUEVA CACERES
+# Post-Evaluation Module
+*Part of the E-Defense System*
 
-E-Defense is an integrated research defense management system developed for the University of Nueva Caceres. It addresses the institutional need to eliminate manual paperwork, reduce scheduling conflicts, and bridge communication gaps among students, research advisers, panel members, and administrators.
-The platform digitalizes the entire research defense lifecycle, from scheduling and panel assignments to post-evaluation consolidation. Enabling efficient management of thesis and capstone defense records across all academic units .
+## Overview
+
+The Post-Evaluation Module is a centralized information management system designed to handle the critical transition between the defense proceedings and final institutional clearance. It automates the collection, consolidation, and processing of evaluation data from panelists and secretaries into a single, standardized official report.
+
+By eliminating manual data entry errors and ensuring consistency through departmental rubrics, the module provides a secure environment where the Research Coordinator manages data integrity via **data-locking**, and the Panel Chair issues final verdicts and book-binding clearances.
 
 ## Tech Stack
-- **Language:** PHP / JavaScript / Python
+
+- **Language:** PHP / JavaScript
 - **Framework:** Laravel (Backend API) / React (Frontend)
 - **Database:** MySQL
+- **Architecture:** Layered Service Architecture  
+  *(Report Generation Service, Consolidation Engine, Access Control)*
 
 ## Installation Guide
 
-1. Clone the repository:
+### Clone the Repository
+
 ```bash
-   git clone https://github.com/DkFerrer/E-Defense-System.git
-   cd e-defense
-```
-2. Install dependencies:
-```bash
-   composer install       
-   npm install            
-   pip install -r requirements.txt   
-```
-3. Set up environment variables — copy .env.example to .env and fill in values.
-4. Run the application:
-```bash
-   php artisan serve      
-   npm run dev            
+git clone https://github.com/Aandreyjiwoo/Post-Evaluation-Module---Quintela.git
+cd Post-Evaluation-Module---Quintela
 ```
 
-## Module Repositories
-| Module | Repository | Developer |
-|--------|-----------|-----------|
-| Scheduling Module | [Link](https://github.com/learoncesvalles/Scheduling-Module) | Lea Roncesvalles |
-| Evaluation Module | [Link](https://github.com/asa_jannamae/Evaluation-Module) | Janna Mae Asa |
-| Post-Evaluation Module | [Link](https://github.com/Aandreyjiwoo/Post-Evaluation-Module) | Andrey Quintela |
-| Monitoring & Notification Module | [Link](https://github.com/thalia-me/Monitoring-Notification-Module) | Dalia Mae Miralles |
+### Install Dependencies
+
+```bash
+composer install
+npm install
+pip install -r requirements.txt
+```
+
+### Set Up Environment Variables
+
+Copy `.env.example` to `.env` and fill in the required values.
+
+### Run the Application
+
+```bash
+php artisan serve
+npm run dev
+```
+
+## Features
+
+- **Automatic Consolidation**  
+  Merges grades, remarks, and recommendations into a unified report based on departmental rubrics.
+
+- **Verdict Management**  
+  Enables the Panel Chair to assign official statuses such as:
+  - Approved
+  - Approved with Minor Revisions
+  - Approved with Major Revisions
+  - For Redefense
+
+- **Data Integrity**  
+  Implements data-locking to prevent modifications once the Research Coordinator generates the official report.
+
+- **Book-binding Clearance**  
+  Digital tracking for the transition from successful defense to final manuscript submission.
+
+- **Role-Based Access**  
+  Specialized dashboards for:
+  - Research Coordinators
+  - Panel Chairs
+  - Students
+
+- **History Tracking**  
+  Stores and retrieves evaluation records across:
+  - Title Defense
+  - Review Defense
+  - Final Defense
+
+## Module Status
+
+**Under Development**
+
+## Database Entities
+
+- `USER`
+- `STUDENT_INFO`
+- `RESEARCH_GROUP`
+- `EVALUATION_RESULT`
+- `CONSOLIDATED_REPORT`
+- `FINAL_VERDICT`
+- `AUDIT_LOG`
+
+## Branch
+
+This module is developed under:
+
+```bash
+feature/post-evaluation-module
+```
+
+## Main System Repository
+
+This module is part of the [E-Defense System](https://github.com/DkFerrer/E-Defense-System)
 
 ## Contributors
+
 | Name | Role |
 |------|------|
-|Lea Roncesvalles  | Developer / Project Manager |
-|Janna Mae Asa     | Frontend Developer / UI-UX Designer |
-|Andrey Quintela   | Backend Developer / Database Engineer |
-|Dalia Mae Miralles| Developer / Documentation Specialist |
-
+| Andrey Quintela | Backend Developer / Database Engineer |
