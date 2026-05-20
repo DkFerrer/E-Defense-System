@@ -25,13 +25,65 @@ import {
   UserCheck,
   Building2,
   Users,
+  Award,
+  User,
+  MessageSquare,
+  Calendar,
 } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { getEvaluationResults } from '../services/api';
 import { colors } from '../theme/tokens';
+import { sections, presentationCriteria } from '../data/evaluationRubric';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width >= 768;
+
+const scorePercentages = {
+  5: 1.0,    // 100% - Excellent
+  4: 0.8,    // 80% - Good
+  3: 0.6,    // 60% - Adequate
+  2: 0.4,    // 40% - Needs Work
+  1: 0.2     // 20% - Poor
+};
+
+const getSelectedLevel = (currentScore, maxPoints) => {
+  for (const [level, percentage] of Object.entries(scorePercentages)) {
+    const expectedScore = Math.round(maxPoints * percentage * 10) / 10;
+    if (Math.abs((currentScore || 0) - expectedScore) < 0.1) {
+      return parseInt(level);
+    }
+  }
+  return null;
+};
+
+const fallbackSections = [
+  {
+    title: "PROJECT DOCUMENTATION AND MANUSCRIPT",
+    subsections: [
+      {
+        title: "Evaluation Criteria",
+        criteria: [
+          { id: 'doc-context', name: 'Project Context', points: 10 },
+          { id: 'doc-objectives', name: 'Clarity and Completeness of Ideas and Objectives', points: 15 },
+          { id: 'doc-method', name: 'Methodology and Technical Approach', points: 25 },
+          { id: 'doc-results', name: 'Results, Analysis, and Output', points: 30 },
+          { id: 'doc-writing', name: 'Quality of Technical Writing', points: 20 }
+        ]
+      }
+    ]
+  }
+];
+
+const getLevelBadgeStyle = (level) => {
+  const stylesMap = {
+    5: { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
+    4: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
+    3: { bg: '#fffbeb', border: '#fef3c7', text: '#b45309' },
+    2: { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
+    1: { bg: '#fef2f2', border: '#fecaca', text: '#b91c1c' },
+  };
+  return stylesMap[level] || { bg: '#f1f5f9', border: '#e2e8f0', text: '#475569' };
+};
 
 export default function ResultsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,6 +94,14 @@ export default function ResultsScreen() {
 
   // Dynamically generate stages based on available results
   const STAGES = ['All', ...new Set(results.map(r => r.stage).filter(Boolean))];
+
+  const exportToPDF = () => {
+    if (Platform.OS === 'web') {
+      window.print();
+    } else {
+      alert('PDF Export is supported on Web browsers. Please save/print as PDF from your browser.');
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -206,26 +266,87 @@ export default function ResultsScreen() {
 
       {/* Report Modal */}
       <Modal visible={!!selectedResult} transparent animationType="slide">
+        {Platform.OS === 'web' && (
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              body {
+                background-color: #ffffff !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              #printable-summary, #printable-summary * {
+                visibility: visible !important;
+              }
+              #printable-summary {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background-color: #ffffff !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              #no-print-header-btn,
+              #no-print-footer-actions,
+              #no-print-close-x {
+                display: none !important;
+                visibility: hidden !important;
+              }
+              [id^="panelist-card-"] {
+                page-break-after: always !important;
+                break-after: page !important;
+              }
+              [id^="panelist-card-"]:last-child {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+              }
+            }
+          ` }} />
+        )}
         <View style={styles.modalOverlay}>
-          <View style={styles.reportBox}>
+          <View style={styles.reportBox} nativeID="printable-summary">
             <View style={styles.reportHeader}>
               <Text style={styles.reportTitle}>Evaluation Summary</Text>
-              <Pressable onPress={() => setSelectedResult(null)}>
-                <X size={24} color="#6b7280" />
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Pressable 
+                  nativeID="no-print-header-btn" 
+                  style={styles.modalExportHeaderBtn} 
+                  onPress={exportToPDF}
+                >
+                  <Download size={18} color="#16a34a" />
+                  <Text style={styles.modalExportHeaderBtnText}>Export PDF</Text>
+                </Pressable>
+                <Pressable nativeID="no-print-close-x" onPress={() => setSelectedResult(null)}>
+                  <X size={24} color="#6b7280" />
+                </Pressable>
+              </View>
             </View>
             
             <ScrollView contentContainerStyle={styles.reportScroll}>
               {selectedResult && (
                 <>
-                  <View style={styles.reportMainInfo}>
-                    <Text style={styles.reportGroupTitle}>{selectedResult.title}</Text>
-                    <Text style={styles.reportAuthors}>{selectedResult.authors}</Text>
+                  {/* Institutional Letterhead */}
+                  <View style={styles.letterheadContainer}>
+                    <Building2 size={36} color="#1e3a8a" />
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                      <Text style={styles.letterheadUniv}>UNIVERSITY OF NUEVA CACERES</Text>
+                      <Text style={styles.letterheadDept}>School of Computer and Information Sciences</Text>
+                      <Text style={styles.letterheadDoc}>RESEARCH DEFENSE EVALUATION REPORT</Text>
+                    </View>
                   </View>
 
-                    <View style={styles.reportStats}>
+                  <View style={styles.reportMainInfo}>
+                    <Text style={styles.reportGroupTitle}>{selectedResult.title}</Text>
+                    <Text style={styles.reportAuthors}>Authors: {selectedResult.authors}</Text>
+                  </View>
+
+                  <View style={styles.reportStats}>
                     <View style={styles.reportStatItem}>
-                      <Text style={styles.reportStatLabel}>Final Grade</Text>
+                      <Text style={styles.reportStatLabel}>Final Average Grade</Text>
                       <Text style={styles.reportStatVal}>{selectedResult.score}%</Text>
                     </View>
                     <View style={styles.reportStatItem}>
@@ -237,76 +358,234 @@ export default function ResultsScreen() {
                   </View>
 
                   <View style={styles.reportSection}>
-                    <Text style={styles.reportSectionTitle}>Score Breakdown</Text>
+                    <Text style={styles.reportSectionTitle}>Detailed Panel Evaluations</Text>
                     {selectedResult.submissions && selectedResult.submissions.length > 0 ? (
-                      selectedResult.submissions.map((sub, i) => (
-                        <View key={i} style={styles.breakdownCard}>
-                          <Text style={styles.breakdownLabel}>Panelist {i + 1} Score: <Text style={{fontWeight: '900', color: '#2563eb'}}>{sub.total_score}</Text></Text>
-                          {(() => {
-                            let parsedScores = sub.scores || {};
-                            if (typeof parsedScores === 'string') {
-                              try { parsedScores = JSON.parse(parsedScores); } catch (e) { parsedScores = {}; }
-                            }
-                            
-                            const docScores = Object.entries(parsedScores).filter(([key]) => key !== 'studentPresentations');
-                            const studentScores = parsedScores.studentPresentations || [];
+                      selectedResult.submissions.map((sub, i) => {
+                        let parsedScores = sub.scores || {};
+                        if (typeof parsedScores === 'string') {
+                          try { parsedScores = JSON.parse(parsedScores); } catch (e) { parsedScores = {}; }
+                        }
+                        let parsedComments = sub.comments || {};
+                        if (typeof parsedComments === 'string') {
+                          try { parsedComments = JSON.parse(parsedComments); } catch (e) { parsedComments = {}; }
+                        }
 
-                            return (
-                              <View>
-                                {docScores.map(([crit, val]) => (
-                                  <View key={crit} style={styles.breakdownRow}>
-                                    <Text style={styles.breakdownSub}>{crit}</Text>
-                                    <Text style={styles.breakdownVal}>{String(val)}</Text>
-                                  </View>
-                                ))}
-                                {Array.isArray(studentScores) && studentScores.map((student, idx) => (
-                                  <View key={`student-${idx}`} style={{ marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: '#cbd5e1' }}>
-                                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 4 }}>
-                                      {student.studentName} (Oral Defense)
-                                    </Text>
-                                    {Object.entries(student.scores || {}).map(([sCrit, sVal]) => (
-                                      <View key={sCrit} style={styles.breakdownRow}>
-                                        <Text style={styles.breakdownSub}>{sCrit}</Text>
-                                        <Text style={styles.breakdownVal}>{String(sVal)}</Text>
-                                      </View>
-                                    ))}
-                                  </View>
-                                ))}
+                        // Determine which rubrics section list to use based on existing score keys
+                        const hasNewRubrics = Object.keys(parsedScores).some(k => k.startsWith('ch') || k.startsWith('rm') || k.startsWith('sdm') || k.startsWith('sm') || k.startsWith('ssp'));
+                        const rubricSections = hasNewRubrics ? sections : fallbackSections;
+                        
+                        // Calculate Documentation Subtotal
+                        let docTotal = 0;
+                        let docMax = 0;
+                        rubricSections.forEach(sec => {
+                          sec.subsections.forEach(subSec => {
+                            subSec.criteria.forEach(crit => {
+                              docTotal += (parsedScores[crit.id] || 0);
+                              docMax += crit.points;
+                            });
+                          });
+                        });
+
+                        const studentScores = parsedScores.studentPresentations || [];
+
+                        return (
+                          <View key={i} nativeID={"panelist-card-" + i} style={styles.panelistCard}>
+                            <View style={styles.panelistCardHeader}>
+                              <UserCheck size={20} color="#fff" />
+                              <Text style={styles.panelistCardTitle}>
+                                Panel Member {i + 1} Scorecard
+                              </Text>
+                              <View style={styles.panelistScoreBadge}>
+                                <Text style={styles.panelistScoreBadgeText}>
+                                  {sub.total_score} / 100
+                                </Text>
                               </View>
-                            );
-                          })()}
-                        </View>
-                      ))
+                            </View>
+
+                            <View style={styles.panelistCardBody}>
+                              <Text style={styles.subSectionSummaryTitle}>
+                                I. PROJECT DOCUMENTATION AND MANUSCRIPT ({docTotal} / {docMax})
+                              </Text>
+
+                              {rubricSections.map((section, secIdx) => {
+                                let sectionScore = 0;
+                                let sectionMax = 0;
+                                section.subsections.forEach(s => {
+                                  s.criteria.forEach(c => {
+                                    sectionScore += (parsedScores[c.id] || 0);
+                                    sectionMax += c.points;
+                                  });
+                                });
+
+                                return (
+                                  <View key={secIdx} style={styles.summarySectionContainer}>
+                                    <View style={styles.summarySectionBarHeader}>
+                                      <Text style={styles.summarySectionBarTitle}>{section.title}</Text>
+                                      <View style={styles.summarySectionScoreBadge}>
+                                        <Text style={styles.summarySectionScoreBadgeText}>
+                                          {sectionScore} / {sectionMax}
+                                        </Text>
+                                      </View>
+                                    </View>
+
+                                    {section.subsections.map((subsection, subIdx) => {
+                                      let subScore = 0;
+                                      let subMax = 0;
+                                      subsection.criteria.forEach(c => {
+                                        subScore += (parsedScores[c.id] || 0);
+                                        subMax += c.points;
+                                      });
+
+                                      return (
+                                        <View key={subIdx} style={styles.summarySubsectionContainer}>
+                                          <View style={styles.summarySubsectionHeader}>
+                                            <Text style={styles.summarySubsectionTitle}>{subsection.title}</Text>
+                                            <Text style={styles.summarySubsectionScore}>{subScore} / {subMax}</Text>
+                                          </View>
+
+                                          {subsection.criteria.map((criterion) => {
+                                            const score = parsedScores[criterion.id] || 0;
+                                            const selectedLevel = getSelectedLevel(score, criterion.points);
+                                            const selectedRubric = criterion.rubric?.find(r => r.level === selectedLevel);
+                                            const selectedDesc = selectedRubric ? selectedRubric.description : '';
+                                            const critComment = parsedComments[criterion.id];
+                                            const badgeTheme = getLevelBadgeStyle(selectedLevel);
+
+                                            return (
+                                              <View key={criterion.id} style={styles.summaryCriterionCard}>
+                                                <View style={styles.summaryCriterionRow}>
+                                                  <View style={{ flex: 1, marginRight: 12 }}>
+                                                    <Text style={styles.summaryCriterionName}>{criterion.name}</Text>
+                                                    {selectedDesc ? (
+                                                      <Text style={styles.summaryCriterionDesc}>{selectedDesc}</Text>
+                                                    ) : null}
+                                                  </View>
+                                                  <View style={styles.summaryCriterionScoreContainer}>
+                                                    <Text style={styles.summaryCriterionScoreText}>
+                                                      {score} <Text style={styles.summaryCriterionMaxText}>/ {criterion.points}</Text>
+                                                    </Text>
+                                                    {selectedLevel ? (
+                                                      <View style={[styles.summaryLevelBadge, { backgroundColor: badgeTheme.bg, borderColor: badgeTheme.border }]}>
+                                                        <Text style={[styles.summaryLevelBadgeText, { color: badgeTheme.text }]}>
+                                                          Level {selectedLevel}
+                                                        </Text>
+                                                      </View>
+                                                    ) : null}
+                                                  </View>
+                                                </View>
+                                                {critComment ? (
+                                                  <View style={styles.summaryCritCommentBox}>
+                                                    <MessageSquare size={12} color="#475569" style={{ marginRight: 6 }} />
+                                                    <Text style={styles.summaryCritCommentText}>
+                                                      {critComment}
+                                                    </Text>
+                                                  </View>
+                                                ) : null}
+                                              </View>
+                                            );
+                                          })}
+                                        </View>
+                                      );
+                                    })}
+                                  </View>
+                                );
+                              })}
+
+                              {/* Student presentation scores */}
+                              {studentScores.length > 0 && (
+                                <View style={{ marginTop: 24 }}>
+                                  <Text style={styles.subSectionSummaryTitle}>
+                                    II. ORAL DEFENSE PRESENTATION (INDIVIDUAL)
+                                  </Text>
+                                  
+                                  {studentScores.map((student, idx) => {
+                                    const studentTotal = presentationCriteria.reduce((sum, c) => sum + (student.scores?.[c.id] || 0), 0);
+                                    const studentMax = presentationCriteria.reduce((sum, c) => sum + c.points, 0);
+                                    const sCommentObj = parsedComments.studentPresentations?.find(sc => sc.studentName === student.studentName) || {};
+
+                                    return (
+                                      <View key={idx} style={styles.studentSummaryCard}>
+                                        <View style={styles.studentSummaryHeader}>
+                                          <User size={16} color="#1e3a8a" style={{ marginRight: 8 }} />
+                                          <Text style={styles.studentSummaryName}>{student.studentName}</Text>
+                                          <Text style={styles.studentSummaryTotalScore}>{studentTotal} / {studentMax}</Text>
+                                        </View>
+
+                                        <View style={{ padding: 12 }}>
+                                          {presentationCriteria.map((criterion) => {
+                                            const score = student.scores?.[criterion.id] || 0;
+                                            const selectedLevel = getSelectedLevel(score, criterion.points);
+                                            const selectedRubric = criterion.rubric?.find(r => r.level === selectedLevel);
+                                            const selectedDesc = selectedRubric ? selectedRubric.description : '';
+                                            const critComment = sCommentObj.comments?.[criterion.id];
+                                            const badgeTheme = getLevelBadgeStyle(selectedLevel);
+
+                                            return (
+                                              <View key={criterion.id} style={styles.studentCriterionRow}>
+                                                <View style={{ flex: 1, marginRight: 12 }}>
+                                                  <Text style={styles.summaryCriterionName}>{criterion.name}</Text>
+                                                  {selectedDesc ? (
+                                                    <Text style={styles.summaryCriterionDesc}>{selectedDesc}</Text>
+                                                  ) : null}
+                                                </View>
+                                                <View style={styles.summaryCriterionScoreContainer}>
+                                                  <Text style={styles.summaryCriterionScoreText}>
+                                                    {score} <Text style={styles.summaryCriterionMaxText}>/ {criterion.points}</Text>
+                                                  </Text>
+                                                  {selectedLevel ? (
+                                                    <View style={[styles.summaryLevelBadge, { backgroundColor: badgeTheme.bg, borderColor: badgeTheme.border }]}>
+                                                      <Text style={[styles.summaryLevelBadgeText, { color: badgeTheme.text }]}>
+                                                        Level {selectedLevel}
+                                                      </Text>
+                                                    </View>
+                                                  ) : null}
+                                                </View>
+                                                {critComment ? (
+                                                  <View style={[styles.summaryCritCommentBox, { marginTop: 4, width: '100%' }]}>
+                                                    <MessageSquare size={12} color="#475569" style={{ marginRight: 6 }} />
+                                                    <Text style={styles.summaryCritCommentText}>
+                                                      {critComment}
+                                                    </Text>
+                                                  </View>
+                                                ) : null}
+                                              </View>
+                                            );
+                                          })}
+                                        </View>
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+                              )}
+
+                              {/* General Panel Comments */}
+                              <View style={styles.summaryGeneralRemarksBox}>
+                                <Text style={styles.summaryGeneralRemarksTitle}>General Remarks & Recommendations</Text>
+                                <Text style={styles.summaryGeneralRemarksText}>
+                                  {sub.general_comments || 'No general comments or recommendations provided.'}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })
                     ) : (
                       <Text style={styles.reportDetailText}>No submissions yet.</Text>
-                    )}
-                  </View>
-
-                  <View style={styles.reportSection}>
-                    <Text style={styles.reportSectionTitle}>Panel Recommendations</Text>
-                    {selectedResult.submissions && selectedResult.submissions.length > 0 ? (
-                      selectedResult.submissions.map((sub, i) => (
-                        <View key={i} style={[styles.recommendationCard, { marginBottom: 8 }]}>
-                          <CheckCircle2 size={16} color="#16a34a" />
-                          <Text style={styles.recommendationText}>
-                            {sub.general_comments || 'No general comments provided.'}
-                          </Text>
-                        </View>
-                      ))
-                    ) : (
-                      <View style={styles.recommendationCard}>
-                        <AlertCircle size={16} color="#ea580c" />
-                        <Text style={[styles.recommendationText, { color: '#ea580c' }]}>Pending Evaluation</Text>
-                      </View>
                     )}
                   </View>
                 </>
               )}
             </ScrollView>
 
-            <Pressable style={styles.closeBtn} onPress={() => setSelectedResult(null)}>
-              <Text style={styles.closeBtnText}>Done</Text>
-            </Pressable>
+            <View nativeID="no-print-footer-actions" style={styles.modalBottomActions}>
+              <Pressable style={styles.modalCloseBtn} onPress={() => setSelectedResult(null)}>
+                <Text style={styles.modalCloseBtnText}>Done</Text>
+              </Pressable>
+              <Pressable style={styles.modalExportBtn} onPress={exportToPDF}>
+                <Download size={20} color="#ffffff" />
+                <Text style={styles.modalExportBtnText}>Export to PDF</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -346,6 +625,7 @@ const styles = StyleSheet.create({
   metaInfo: { flexDirection: 'row', gap: 16 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 12, color: '#6b7280', fontWeight: '600' },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
   statusText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
   statusBadgeModal: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, marginTop: 4 },
   statusTextModal: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase' },
@@ -386,4 +666,323 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: '700', color: '#4b5563' },
   tabTextActive: { color: '#ffffff' },
   breakdownCard: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+
+  // PDF Export Header Btn
+  modalExportHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    backgroundColor: '#f0fdf4',
+    gap: 6,
+  },
+  modalExportHeaderBtnText: {
+    color: '#16a34a',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+
+  // Institutional letterhead
+  letterheadContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 20,
+  },
+  letterheadUniv: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1e3a8a',
+    letterSpacing: 0.5,
+  },
+  letterheadDept: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    marginTop: 2,
+  },
+  letterheadDoc: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1e3a8a',
+    marginTop: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Panel Scorecard and Sections
+  panelistCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  panelistCardHeader: {
+    backgroundColor: '#1e3a8a',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  panelistCardTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+    marginLeft: 10,
+    flex: 1,
+  },
+  panelistScoreBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  panelistScoreBadgeText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  panelistCardBody: {
+    padding: 16,
+  },
+  subSectionSummaryTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summarySectionContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  summarySectionBarHeader: {
+    backgroundColor: '#475569',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  summarySectionBarTitle: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+    flex: 1,
+  },
+  summarySectionScoreBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  summarySectionScoreBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  summarySubsectionContainer: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  summarySubsectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  summarySubsectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  summarySubsectionScore: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1e293b',
+  },
+
+  // Criterion Card / Remarks details
+  summaryCriterionCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+  },
+  summaryCriterionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  summaryCriterionName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  summaryCriterionDesc: {
+    fontSize: 10,
+    color: '#64748b',
+    marginTop: 4,
+    lineHeight: 14,
+  },
+  summaryCriterionScoreContainer: {
+    alignItems: 'flex-end',
+    minWidth: 70,
+  },
+  summaryCriterionScoreText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1e293b',
+  },
+  summaryCriterionMaxText: {
+    fontSize: 10,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  summaryLevelBadge: {
+    marginTop: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  summaryLevelBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  summaryCritCommentBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  summaryCritCommentText: {
+    fontSize: 11,
+    color: '#475569',
+    flex: 1,
+  },
+
+  // Student Presentation details
+  studentSummaryCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  studentSummaryHeader: {
+    backgroundColor: '#f1f5f9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  studentSummaryName: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1e3a8a',
+    flex: 1,
+  },
+  studentSummaryTotalScore: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#10b981',
+  },
+  studentCriterionRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingVertical: 8,
+  },
+
+  // Remarks & Bottom Actions
+  summaryGeneralRemarksBox: {
+    marginTop: 20,
+    backgroundColor: '#fffbeb',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+    padding: 16,
+  },
+  summaryGeneralRemarksTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#b45309',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  summaryGeneralRemarksText: {
+    fontSize: 12,
+    color: '#78350f',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  modalBottomActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  modalCloseBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  modalCloseBtnText: {
+    color: '#475569',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  modalExportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#16a34a',
+    gap: 8,
+  },
+  modalExportBtnText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });
