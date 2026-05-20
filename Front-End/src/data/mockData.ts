@@ -1,3 +1,5 @@
+import { sections, presentationCriteria } from './evaluationRubric';
+
 export type DefenseStage = 'Review Defense' | 'Title Defense' | 'Final Defense';
 
 export interface ResearchGroup {
@@ -116,283 +118,223 @@ export interface PanelistEvaluation {
   comments: string;
 }
 
+export const g1Members = mockResearchGroups.find(g => g.id === "1")?.members || [];
+const g2Members = mockResearchGroups.find(g => g.id === "2")?.members || [];
+const g3Members = mockResearchGroups.find(g => g.id === "3")?.members || [];
+const g4Members = mockResearchGroups.find(g => g.id === "4")?.members || [];
+const g5Members = mockResearchGroups.find(g => g.id === "5")?.members || [];
+const g6Members = mockResearchGroups.find(g => g.id === "6")?.members || [];
+
+interface BaseLevels {
+  ch1: number;
+  ch2: number;
+  rm: number;
+  sdm: number;
+  sm: number;
+  te: number;
+  ssp: number;
+  pres: Record<string, number>;
+}
+
+function createPanelistEvaluation(
+  panelist: string,
+  totalScore: number,
+  comments: string,
+  groupMembers: string[],
+  baseLevels: BaseLevels
+): PanelistEvaluation {
+  const sectionLevelMap: Record<string, number> = {
+    "Introduction and Background": baseLevels.ch1,
+    "Review of Related Literature": baseLevels.ch2,
+    "Research Methodology": baseLevels.rm,
+    "Software Development Methodology": baseLevels.sdm,
+    "System Models": baseLevels.sm,
+    "Testing and Evaluation": baseLevels.te,
+    "Software Solution Prototype": baseLevels.ssp,
+  };
+
+  const chapters: EvaluationChapter[] = sections.flatMap(sec => 
+    sec.subsections.map(sub => {
+      const level = sectionLevelMap[sub.title] || 4;
+      const criteria: EvaluationCriterion[] = sub.criteria.map(crit => {
+        const percentage = level === 5 ? 1.0 : level === 4 ? 0.8 : level === 3 ? 0.6 : level === 2 ? 0.4 : 0.2;
+        const score = Math.round(crit.points * percentage * 10) / 10;
+        
+        let comment = `Adequate work on ${crit.name}.`;
+        if (level === 5) comment = `Excellent, comprehensive presentation of ${crit.name}. Extremely well done.`;
+        else if (level === 4) comment = `Very good and clear ${crit.name} with minor gaps.`;
+        else if (level === 2) comment = `Needs more refinement on ${crit.name}.`;
+        else if (level === 1) comment = `Poorly defined ${crit.name}, needs major revision.`;
+
+        return {
+          criterion: crit.id,
+          maxPoints: crit.points,
+          description: crit.name,
+          score,
+          comment
+        };
+      });
+
+      return {
+        chapter: sub.title,
+        criteria
+      };
+    })
+  );
+
+  const studentPresentations = groupMembers.map(member => {
+    const level = baseLevels.pres[member] || 4;
+    const criteria: EvaluationCriterion[] = presentationCriteria.map(crit => {
+      const percentage = level === 5 ? 1.0 : level === 4 ? 0.8 : level === 3 ? 0.6 : level === 2 ? 0.4 : 0.2;
+      const score = Math.round(crit.points * percentage * 10) / 10;
+      
+      let comment = `Good delivery on ${crit.name}.`;
+      if (level === 5) comment = `Masterful delivery and exceptional defense of ${crit.name}.`;
+      else if (level === 3) comment = `Satisfactory work, but could improve ${crit.name}.`;
+
+      return {
+        criterion: crit.id,
+        maxPoints: crit.points,
+        description: crit.name,
+        score,
+        comment
+      };
+    });
+
+    return {
+      studentName: member,
+      criteria
+    };
+  });
+
+  return {
+    panelist,
+    totalScore,
+    chapters,
+    studentPresentations,
+    comments
+  };
+}
+
 export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
   "1": [
-    {
-      panelist: "Dr. Elena Cruz", totalScore: 85,
-      comments: "Good implementation of blockchain concepts. Needs improvement in security aspects.",
-      chapters: [
-        { chapter: "Chapter 1: Introduction", criteria: [
-          { criterion: "Project Context", maxPoints: 10, description: "Clearly stated and explains the innovation.", score: 8, comment: "Well-defined but could elaborate on user challenges." },
-          { criterion: "Statement of Goals and Objectives", maxPoints: 15, description: "Clearly identify the goals and objectives.", score: 12, comment: "Goals clear, some objectives need better alignment." },
-          { criterion: "Purpose and Description", maxPoints: 20, description: "Clearly identify the purpose and beneficiaries.", score: 16, comment: "Purpose well-articulated. Expand beneficiaries." },
-          { criterion: "Issues and Assumptions", maxPoints: 15, description: "Discusses constraints and assumptions.", score: 13, comment: "Constraints listed but assumptions need justification." },
-          { criterion: "Definition of Terms", maxPoints: 10, description: "Technical terms defined clearly.", score: 9, comment: "Well-organized and comprehensive." },
-        ]},
-        { chapter: "Chapter 2: Review of Related Literatures", criteria: [
-          { criterion: "Technical Background", maxPoints: 20, description: "Discusses technical aspects deeply.", score: 17, comment: "Strong discussion. Add more diagrams." },
-          { criterion: "Related Literature", maxPoints: 50, description: "Literatures are relevant and properly cited.", score: 40, comment: "Needs more recent 2024-2025 references." },
-          { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Coherent and identifies key gaps." },
-        ]},
-      ],
-      studentPresentations: [
-        {
-          studentName: "Sarah Williams",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Excellent presentation flow." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Very strong understanding of smart contracts." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Answered testing questions cleanly." }
-          ]
-        },
-        {
-          studentName: "Michael Brown",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 7, comment: "Good presentation but read a bit from slides." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Strong knowledge of the architecture." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 12, comment: "Answered database queries well." }
-          ]
-        }
-      ]
-    },
-    {
-      panelist: "Dr. Roberto Santos", totalScore: 80,
-      comments: "Solid technical foundation. User interface could be more intuitive.",
-      chapters: [
-        { chapter: "Chapter 1: Introduction", criteria: [
-          { criterion: "Project Context", maxPoints: 10, description: "Clearly stated and explains the innovation.", score: 8, comment: "Adequate context provided." },
-          { criterion: "Statement of Goals and Objectives", maxPoints: 15, description: "Clearly identify the goals and objectives.", score: 11, comment: "Objectives could be more measurable." },
-          { criterion: "Purpose and Description", maxPoints: 20, description: "Clearly identify the purpose and beneficiaries.", score: 15, comment: "Significance needs stronger justification." },
-          { criterion: "Issues and Assumptions", maxPoints: 15, description: "Discusses constraints and assumptions.", score: 12, comment: "Missing scalability constraints." },
-          { criterion: "Definition of Terms", maxPoints: 10, description: "Technical terms defined clearly.", score: 8, comment: "Some blockchain terms are missing." },
-        ]},
-        { chapter: "Chapter 2: Review of Related Literatures", criteria: [
-          { criterion: "Technical Background", maxPoints: 20, description: "Discusses technical aspects deeply.", score: 16, comment: "Needs deeper consensus mechanism discussion." },
-          { criterion: "Related Literature", maxPoints: 50, description: "Literatures are relevant and properly cited.", score: 38, comment: "Add more comparative analysis." },
-          { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 26, comment: "Missing clear research gap identification." },
-        ]},
-      ],
-      studentPresentations: [
-        {
-          studentName: "Sarah Williams",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Highly articulate and professional." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Clear explanation of technical concepts." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 12, comment: "Handled security questions well." }
-          ]
-        },
-        {
-          studentName: "Michael Brown",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 7, comment: "Clear slides but pacing was slightly fast." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 11, comment: "Understands user management systems thoroughly." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 11, comment: "Struggled slightly on optimization answers." }
-          ]
-        }
-      ]
-    },
-    {
-      panelist: "Dr. Maria Garcia", totalScore: 81,
-      comments: "Well-structured research. Consider adding more test cases.",
-      chapters: [
-        { chapter: "Chapter 1: Introduction", criteria: [
-          { criterion: "Project Context", maxPoints: 10, description: "Clearly stated and explains the innovation.", score: 9, comment: "Very clear and well-written." },
-          { criterion: "Statement of Goals and Objectives", maxPoints: 15, description: "Clearly identify the goals and objectives.", score: 12, comment: "Well-aligned with project scope." },
-          { criterion: "Purpose and Description", maxPoints: 20, description: "Clearly identify the purpose and beneficiaries.", score: 16, comment: "Good stakeholder identification." },
-          { criterion: "Issues and Assumptions", maxPoints: 15, description: "Discusses constraints and assumptions.", score: 12, comment: "Add data privacy constraints." },
-          { criterion: "Definition of Terms", maxPoints: 10, description: "Technical terms defined clearly.", score: 8, comment: "Add smart contract terminology." },
-        ]},
-        { chapter: "Chapter 2: Review of Related Literatures", criteria: [
-          { criterion: "Technical Background", maxPoints: 20, description: "Discusses technical aspects deeply.", score: 17, comment: "Thorough technical overview." },
-          { criterion: "Related Literature", maxPoints: 50, description: "Literatures are relevant and properly cited.", score: 39, comment: "Include more international studies." },
-          { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 24, comment: "Could be more concise and focused." },
-        ]},
-      ],
-      studentPresentations: [
-        {
-          studentName: "Sarah Williams",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Excellent posture and slides structure." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Demonstrated solid technical skill." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 12, comment: "Polite and accurate answers." }
-          ]
-        },
-        {
-          studentName: "Michael Brown",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 7, comment: "Presented with confidence. Good energy." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Solid overview of core technologies." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Gave concrete examples during Q&A." }
-          ]
-        }
-      ]
-    },
+    createPanelistEvaluation(
+      "Dr. Elena Cruz", 85,
+      "Good implementation of blockchain concepts. Needs improvement in security aspects.",
+      g1Members,
+      { ch1: 4, ch2: 4, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 5, pres: { "Sarah Williams": 5, "Michael Brown": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Roberto Santos", 80,
+      "Solid technical foundation. User interface could be more intuitive.",
+      g1Members,
+      { ch1: 4, ch2: 4, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 4, pres: { "Sarah Williams": 4, "Michael Brown": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Maria Garcia", 81,
+      "Well-structured research. Consider adding more test cases.",
+      g1Members,
+      { ch1: 4, ch2: 4, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 4, pres: { "Sarah Williams": 5, "Michael Brown": 4 } }
+    )
   ],
   "2": [
-    {
-      panelist: "Dr. Elena Cruz", totalScore: 93,
-      comments: "Excellent AI integration and innovative approach to remote learning.",
-      chapters: [
-        { chapter: "Chapter 1: Introduction", criteria: [
-          { criterion: "Project Context", maxPoints: 10, description: "Clearly stated and explains the innovation.", score: 10, comment: "Excellent context with strong justification." },
-          { criterion: "Statement of Goals and Objectives", maxPoints: 15, description: "Clearly identify the goals and objectives.", score: 14, comment: "Very well-defined SMART objectives." },
-          { criterion: "Purpose and Description", maxPoints: 20, description: "Clearly identify the purpose and beneficiaries.", score: 19, comment: "Outstanding articulation of impact." },
-          { criterion: "Issues and Assumptions", maxPoints: 15, description: "Discusses constraints and assumptions.", score: 14, comment: "Comprehensive constraint analysis." },
-          { criterion: "Definition of Terms", maxPoints: 10, description: "Technical terms defined clearly.", score: 9, comment: "Minor omissions in AI terminology." },
-        ]},
-        { chapter: "Chapter 2: Review of Related Literatures", criteria: [
-          { criterion: "Technical Background", maxPoints: 20, description: "Discusses technical aspects deeply.", score: 19, comment: "Exceptional depth in AI/ML concepts." },
-          { criterion: "Related Literature", maxPoints: 50, description: "Literatures are relevant and properly cited.", score: 47, comment: "Extensive and well-organized review." },
-          { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Clear identification of research gaps." },
-        ]},
-      ],
-      studentPresentations: [
-        {
-          studentName: "John Doe",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Articulate speaker with strong slides." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 14, comment: "Deep understanding of the neural networks used." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Answered complex algorithmic questions with ease." }
-          ]
-        },
-        {
-          studentName: "Jane Smith",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Incredibly professional and engaging." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 15, comment: "Perfect mastery of system integrations." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 15, comment: "Masterful responses, cited sources effortlessly." }
-          ]
-        },
-        {
-          studentName: "Mark Johnson",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Solid presentation, kept within time limit." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Excellent understanding of the training datasets." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Handled database and hosting questions well." }
-          ]
-        }
-      ]
-    },
+    createPanelistEvaluation(
+      "Dr. Elena Cruz", 93,
+      "Excellent AI integration and innovative approach to remote learning.",
+      g2Members,
+      { ch1: 5, ch2: 5, rm: 5, sdm: 5, sm: 5, te: 5, ssp: 5, pres: { "John Doe": 5, "Jane Smith": 5, "Mark Johnson": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Roberto Santos", 92,
+      "Outstanding presentation of AI/ML concepts. Very thorough and stable prototype.",
+      g2Members,
+      { ch1: 5, ch2: 5, rm: 5, sdm: 5, sm: 5, te: 5, ssp: 5, pres: { "John Doe": 5, "Jane Smith": 5, "Mark Johnson": 5 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Maria Garcia", 91,
+      "Impressed by the deep learning model integration and UI usability.",
+      g2Members,
+      { ch1: 5, ch2: 5, rm: 5, sdm: 5, sm: 5, te: 5, ssp: 5, pres: { "John Doe": 4, "Jane Smith": 5, "Mark Johnson": 5 } }
+    )
   ],
   "3": [
-    {
-      panelist: "Dr. Elena Cruz", totalScore: 88,
-      comments: "Strong business model with good market analysis.",
-      chapters: [
-        { chapter: "Chapter 1: Introduction", criteria: [
-          { criterion: "Project Context", maxPoints: 10, description: "Clearly stated and explains the innovation.", score: 9, comment: "Good market context for agricultural sector." },
-          { criterion: "Statement of Goals and Objectives", maxPoints: 15, description: "Clearly identify the goals and objectives.", score: 13, comment: "Clear goals tied to market needs." },
-          { criterion: "Purpose and Description", maxPoints: 20, description: "Clearly identify the purpose and beneficiaries.", score: 17, comment: "Well-defined farming community beneficiaries." },
-          { criterion: "Issues and Assumptions", maxPoints: 15, description: "Discusses constraints and assumptions.", score: 13, comment: "Consider rural internet connectivity." },
-          { criterion: "Definition of Terms", maxPoints: 10, description: "Technical terms defined clearly.", score: 9, comment: "Complete and well-organized." },
-        ]},
-        { chapter: "Chapter 2: Review of Related Literatures", criteria: [
-          { criterion: "Technical Background", maxPoints: 20, description: "Discusses technical aspects deeply.", score: 18, comment: "Strong e-commerce technical foundation." },
-          { criterion: "Related Literature", maxPoints: 50, description: "Literatures are relevant and properly cited.", score: 43, comment: "Add more international comparisons." },
-          { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Well-synthesized with clear direction." },
-        ]},
-      ],
-      studentPresentations: [
-        {
-          studentName: "Anna Lee",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Good tone and presentation flow." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Strong knowledge of agricultural supply chains." },
-            { criterion: "Response to Questions", maxPoints: 14, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Confident answers about market entry." }
-          ]
-        },
-        {
-          studentName: "Thomas Clark",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Polished slides, very good interaction." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Solid overview of payment gateways used." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Handled security and privacy queries well." }
-          ]
-        }
-      ]
-    },
+    createPanelistEvaluation(
+      "Dr. Elena Cruz", 88,
+      "Strong business model with good market analysis.",
+      g3Members,
+      { ch1: 4, ch2: 5, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 5, pres: { "Anna Lee": 4, "Thomas Clark": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Roberto Santos", 87,
+      "Great implementation of payment gateway and agricultural logistics.",
+      g3Members,
+      { ch1: 4, ch2: 4, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 5, pres: { "Anna Lee": 4, "Thomas Clark": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Maria Garcia", 89,
+      "Clear supply chain solution, excellent presentation and delivery.",
+      g3Members,
+      { ch1: 4, ch2: 4, rm: 5, sdm: 4, sm: 4, te: 5, ssp: 5, pres: { "Anna Lee": 5, "Thomas Clark": 4 } }
+    )
   ],
   "4": [
-    {
-      panelist: "Dr. Elena Cruz", totalScore: 96,
-      comments: "Exceptional research with significant social impact potential.",
-      chapters: [
-        { chapter: "Chapter 1: Introduction", criteria: [
-          { criterion: "Project Context", maxPoints: 10, description: "Clearly stated and explains the innovation.", score: 10, comment: "Perfect context with real-world data." },
-          { criterion: "Statement of Goals and Objectives", maxPoints: 15, description: "Clearly identify the goals and objectives.", score: 15, comment: "Exemplary goal definition." },
-          { criterion: "Purpose and Description", maxPoints: 20, description: "Clearly identify the purpose and beneficiaries.", score: 20, comment: "Outstanding impact analysis." },
-          { criterion: "Issues and Assumptions", maxPoints: 15, description: "Discusses constraints and assumptions.", score: 14, comment: "Minor gap in regulatory constraints." },
-          { criterion: "Definition of Terms", maxPoints: 10, description: "Technical terms defined clearly.", score: 10, comment: "Comprehensive and perfectly organized." },
-        ]},
-        { chapter: "Chapter 2: Review of Related Literatures", criteria: [
-          { criterion: "Technical Background", maxPoints: 20, description: "Discusses technical aspects deeply.", score: 20, comment: "Masterful technical exposition." },
-          { criterion: "Related Literature", maxPoints: 50, description: "Literatures are relevant and properly cited.", score: 48, comment: "Exceptional breadth and depth." },
-          { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 29, comment: "Outstanding synthesis with clear contributions." },
-        ]},
-      ],
-      studentPresentations: [
-        {
-          studentName: "Carlos Rivera",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Engaging delivery and clear pacing." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 15, comment: "Masterful IoT architecture explanation." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Answered network latency questions brilliantly." }
-          ]
-        },
-        {
-          studentName: "Jessica Park",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 10, comment: "Perfect presentation delivery." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 15, comment: "Invaluable technical contribution." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 15, comment: "Outstanding responses. Handled questions like an expert." }
-          ]
-        },
-        {
-          studentName: "David Kim",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Well-structured slides, very professional." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 14, comment: "Strong understanding of traffic models." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Gave clear answers to hardware integration questions." }
-          ]
-        }
-      ]
-    },
+    createPanelistEvaluation(
+      "Dr. Elena Cruz", 76,
+      "Interesting IoT implementation, but needs more rigorous testing under latency.",
+      g4Members,
+      { ch1: 4, ch2: 4, rm: 3, sdm: 3, sm: 4, te: 3, ssp: 4, pres: { "Carlos Rivera": 4, "Jessica Park": 5, "David Kim": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Roberto Santos", 74,
+      "Activity diagrams are a bit cluttered. Hardware setup works but could be optimized.",
+      g4Members,
+      { ch1: 3, ch2: 4, rm: 3, sdm: 3, sm: 3, te: 3, ssp: 4, pres: { "Carlos Rivera": 4, "Jessica Park": 4, "David Kim": 3 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Maria Garcia", 75,
+      "Good prototype. Ensure traffic flow algorithms are fully documented.",
+      g4Members,
+      { ch1: 4, ch2: 3, rm: 4, sdm: 3, sm: 4, te: 3, ssp: 4, pres: { "Carlos Rivera": 4, "Jessica Park": 4, "David Kim": 4 } }
+    )
   ],
   "5": [
-    {
-      panelist: "Dr. Elena Cruz", totalScore: 89,
-      comments: "Good sustainability framework and practical applications.",
-      chapters: [
-        { chapter: "Chapter 1: Introduction", criteria: [
-          { criterion: "Project Context", maxPoints: 10, description: "Clearly stated and explains the innovation.", score: 9, comment: "Solid context with good data references." },
-          { criterion: "Statement of Goals and Objectives", maxPoints: 15, description: "Clearly identify the goals and objectives.", score: 13, comment: "Goals are well-scoped and achievable." },
-          { criterion: "Purpose and Description", maxPoints: 20, description: "Clearly identify the purpose and beneficiaries.", score: 18, comment: "Clear academic and practical beneficiaries." },
-          { criterion: "Issues and Assumptions", maxPoints: 15, description: "Discusses constraints and assumptions.", score: 13, comment: "Consider data quality issues." },
-          { criterion: "Definition of Terms", maxPoints: 10, description: "Technical terms defined clearly.", score: 9, comment: "Minor additions for ML terms suggested." },
-        ]},
-        { chapter: "Chapter 2: Review of Related Literatures", criteria: [
-          { criterion: "Technical Background", maxPoints: 20, description: "Discusses technical aspects deeply.", score: 18, comment: "Strong analytical framework." },
-          { criterion: "Related Literature", maxPoints: 50, description: "Literatures are relevant and properly cited.", score: 44, comment: "Well-curated with good relevance." },
-          { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Good synthesis linking theory to practice." },
-        ]},
-      ],
-      studentPresentations: [
-        {
-          studentName: "Maria Reyes",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Presented with great clarity and poise." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 14, comment: "Excellent command over dataset details." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Handled data cleaning questions expertly." }
-          ]
-        },
-        {
-          studentName: "Luis Santos",
-          criteria: [
-            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Strong slides, very good engagement." },
-            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Very good understanding of predictive model outputs." },
-            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Handled panel inquiries on model accuracy well." }
-          ]
-        }
-      ]
-    },
+    createPanelistEvaluation(
+      "Dr. Elena Cruz", 90,
+      "Excellent analytics platform. High model accuracy and well-written literature review.",
+      g5Members,
+      { ch1: 5, ch2: 5, rm: 4, sdm: 5, sm: 5, te: 4, ssp: 5, pres: { "Maria Reyes": 5, "Luis Santos": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Roberto Santos", 89,
+      "Comprehensive conceptual framework. Predictive results are useful for student profiling.",
+      g5Members,
+      { ch1: 4, ch2: 5, rm: 5, sdm: 4, sm: 5, te: 4, ssp: 5, pres: { "Maria Reyes": 4, "Luis Santos": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Maria Garcia", 91,
+      "Outstanding visualization of student data. Excellent presentation delivery.",
+      g5Members,
+      { ch1: 5, ch2: 5, rm: 5, sdm: 5, sm: 5, te: 5, ssp: 5, pres: { "Maria Reyes": 5, "Luis Santos": 5 } }
+    )
   ],
+  "6": [
+    createPanelistEvaluation(
+      "Dr. Elena Cruz", 85,
+      "Very practical inventory system for SMEs. Highly usable interface.",
+      g6Members,
+      { ch1: 4, ch2: 4, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 4, pres: { "Kevin Tan": 4, "Patricia Lim": 4, "Roy Cruz": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Roberto Santos", 84,
+      "Solid database design and sequence diagrams. Reliable web portal.",
+      g6Members,
+      { ch1: 4, ch2: 4, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 4, pres: { "Kevin Tan": 4, "Patricia Lim": 4, "Roy Cruz": 4 } }
+    ),
+    createPanelistEvaluation(
+      "Dr. Maria Garcia", 86,
+      "Good support for local business workflows. Well defended.",
+      g6Members,
+      { ch1: 4, ch2: 4, rm: 4, sdm: 4, sm: 4, te: 4, ssp: 4, pres: { "Kevin Tan": 5, "Patricia Lim": 4, "Roy Cruz": 4 } }
+    )
+  ]
 };

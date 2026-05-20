@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, TextInput, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { mockResearchGroups, mockPanelistEvaluations } from '../../src/data/mockData';
@@ -7,6 +7,7 @@ import { Colors } from '../../src/theme/colors';
 import { Typography } from '../../src/theme/typography';
 import StatusBadge from '../../src/components/StatusBadge';
 import { useAppData } from '../../src/context/AppDataContext';
+import { sections, presentationCriteria, getSelectedLevel } from '../../src/data/evaluationRubric';
 
 function getScoreColor(score: number, max?: number): string {
   const ratio = max ? score / max : score / 100;
@@ -31,6 +32,84 @@ function getScoreTextColor(score: number, max: number): string {
   if (ratio >= 0.5) return '#854D0E';
   return '#991B1B';
 }
+
+interface CriterionCardProps {
+  criterion: {
+    id: string;
+    name: string;
+    points: number;
+    rubric: { level: number; description: string }[];
+  };
+  score: number;
+  comment: string;
+  isWide: boolean;
+}
+
+const CriterionCard = React.memo(({ criterion, score, comment, isWide }: CriterionCardProps) => {
+  const selectedLevel = getSelectedLevel(score, criterion.points);
+
+  return (
+    <View style={styles.criterionContainer}>
+      <View style={[styles.criterionRow, { flexDirection: isWide ? 'row' : 'column' }]}>
+        {/* Left Column */}
+        <View style={[styles.critLeftCol, { width: isWide ? '12%' : '100%' }]}>
+          <Text style={styles.critPointsText}>{criterion.points}</Text>
+          <Text style={styles.critNameText}>{criterion.name}</Text>
+        </View>
+
+        {/* Levels Columns */}
+        {criterion.rubric.map((r) => {
+          const isSelected = selectedLevel === r.level;
+          return (
+            <View
+              key={r.level}
+              style={[
+                styles.levelCol,
+                { width: isWide ? '16%' : '100%' },
+                isSelected && styles.levelColSelected
+              ]}
+            >
+              <View style={styles.levelHeaderRow}>
+                <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]} />
+                <Text style={[styles.levelTitle, isSelected && styles.levelTitleSelected]}>
+                  {r.level} {r.level === 5 ? 'Excellent' : r.level === 4 ? 'Good' : r.level === 3 ? 'Adequate' : r.level === 2 ? 'Needs Work' : 'Poor'}
+                </Text>
+              </View>
+              <Text style={styles.levelDescText}>{r.description}</Text>
+            </View>
+          );
+        })}
+
+        {/* Right Column (Score Input) */}
+        <View style={[styles.critRightCol, { width: isWide ? '8%' : '100%' }]}>
+          <TextInput
+            keyboardType="numeric"
+            style={styles.scoreNumberInput}
+            value={score !== undefined && score !== null ? String(score) : ''}
+            editable={false}
+            placeholder="0"
+          />
+          <Text style={styles.maxScoreText}>/ {criterion.points}</Text>
+        </View>
+      </View>
+
+      {/* Remarks/Comments Row */}
+      <View style={styles.commentRow}>
+        <View style={styles.commentLabelRow}>
+          <Ionicons name="chatbubble-ellipses-outline" size={14} color="#9ca3af" />
+          <Text style={styles.commentLabelText}>Remarks / Comments:</Text>
+        </View>
+        <TextInput
+          style={styles.commentTextInput}
+          placeholder="No remarks provided for this criterion."
+          value={comment || ''}
+          editable={false}
+          multiline
+        />
+      </View>
+    </View>
+  );
+});
 
 
 
@@ -228,187 +307,154 @@ export default function ResearchGroupDetailScreen() {
           {(() => {
             const ev = evaluations[activeTab];
             if (!ev) return null;
+
+            const getSubsectionScore = (subsectionTitle: string) => {
+              const chapter = ev.chapters.find(ch => ch.chapter === subsectionTitle);
+              if (!chapter) return { score: 0, max: 0 };
+              const score = chapter.criteria.reduce((s, c) => s + c.score, 0);
+              const max = chapter.criteria.reduce((s, c) => s + c.maxPoints, 0);
+              return { score, max };
+            };
+
+            const getSectionScore = (section: typeof sections[number]) => {
+              let score = 0;
+              let max = 0;
+              section.subsections.forEach(sub => {
+                const res = getSubsectionScore(sub.title);
+                score += res.score;
+                max += res.max;
+              });
+              return { score, max };
+            };
+
+            const getStudentPresentationTotal = (studentName: string) => {
+              const studentData = ev.studentPresentations?.find(s => s.studentName === studentName);
+              if (!studentData) return 0;
+              return studentData.criteria.reduce((s, c) => s + c.score, 0);
+            };
+
+            const getStudentPresentationMax = (studentName: string) => {
+              const studentData = ev.studentPresentations?.find(s => s.studentName === studentName);
+              if (!studentData) return 40;
+              return studentData.criteria.reduce((s, c) => s + c.maxPoints, 0);
+            };
+
             return (
-              <View style={styles.evalContainer}>
-                {/* Gradient-style header */}
-                <View style={styles.evalGradientHeader}>
-                  <Text style={styles.evalHeaderName}>{ev.panelist}</Text>
-                  <Text style={styles.evalHeaderScore}>Total Score: {ev.totalScore}/100</Text>
-                </View>
-
-                {/* Rubric content */}
-                <View style={styles.evalBody}>
-                  <Text style={styles.rubricTitle}>PROJECT DOCUMENTATION AND MANUSCRIPT</Text>
-
-                  {ev.chapters.map((chapter, chapterIdx) => {
-                    const chapterTotal = chapter.criteria.reduce((s, c) => s + c.score, 0);
-                    const chapterMax = chapter.criteria.reduce((s, c) => s + c.maxPoints, 0);
-                    return (
-                      <View key={chapterIdx} style={styles.chapterBlock}>
-                        {/* Chapter header */}
-                        <View style={styles.chapterHeader}>
-                          <Text style={styles.chapterHeaderText}>{chapter.chapter}</Text>
-                        </View>
-
-                        {/* Table header */}
-                        <View style={styles.tableHeaderRow}>
-                          <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Criterion</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center' }]}>Points</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 3.5 }]}>Description</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center' }]}>Score</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Comment</Text>
-                        </View>
-
-                        {/* Criteria rows */}
-                        {chapter.criteria.map((criterion, cIdx) => (
-                          <View key={cIdx} style={[styles.tableRow, cIdx % 2 === 1 && styles.tableRowAlt]}>
-                            <Text style={[styles.tableCellBold, { flex: 2 }]}>{criterion.criterion}</Text>
-                            <Text style={[styles.tableCellCenter, { flex: 0.8 }]}>{criterion.maxPoints}</Text>
-                            <Text style={[styles.tableCellDesc, { flex: 3.5 }]}>{criterion.description}</Text>
-                            <View style={[styles.tableCellScoreWrap, { flex: 0.8 }]}>
-                              <View style={[
-                                styles.scoreBadge,
-                                { backgroundColor: getScoreBgColor(criterion.score, criterion.maxPoints) }
-                              ]}>
-                                <Text style={[
-                                  styles.scoreBadgeText,
-                                  { color: getScoreTextColor(criterion.score, criterion.maxPoints) }
-                                ]}>
-                                  {criterion.score}
-                                </Text>
-                              </View>
-                            </View>
-                            <Text style={[styles.tableCellComment, { flex: 3 }]}>{criterion.comment}</Text>
-                          </View>
-                        ))}
-
-                        {/* Chapter total row */}
-                        <View style={styles.chapterTotalRow}>
-                          <Text style={[styles.chapterTotalLabel, { flex: 3.5 }]}>Chapter Total</Text>
-                          <Text style={[styles.chapterTotalMax, { flex: 5 }]}>Max: {chapterMax} points</Text>
-                          <View style={[styles.tableCellScoreWrap, { flex: 1 }]}>
-                            <View style={styles.chapterTotalBadge}>
-                              <Text style={styles.chapterTotalBadgeText}>{chapterTotal}</Text>
-                            </View>
-                          </View>
+              <View style={{ gap: 24 }}>
+                {/* DYNAMIC SECTIONS */}
+                {sections.map((section, idx) => {
+                  const sectionRes = getSectionScore(section);
+                  return (
+                    <View key={idx} style={styles.sectionContainer}>
+                      <View style={styles.sectionBarHeader}>
+                        <Ionicons name="document-text-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.sectionBarTitle}>{section.title}</Text>
+                        <View style={styles.sectionScoreBadge}>
+                          <Text style={styles.sectionScoreBadgeText}>{sectionRes.score} / {sectionRes.max}</Text>
                         </View>
                       </View>
-                    );
-                  })}
 
-                  {/* ORAL DEFENSE PRESENTATION */}
-                  <Text style={[styles.rubricTitle, { marginTop: 12 }]}>ORAL DEFENSE PRESENTATION</Text>
+                      {section.subsections.map((subsection, subIdx) => {
+                        const subRes = getSubsectionScore(subsection.title);
+                        return (
+                          <View key={subIdx} style={styles.subsectionContainer}>
+                            <View style={styles.subsectionHeader}>
+                              <Text style={styles.subsectionTitle}>{subsection.title}</Text>
+                              <Text style={styles.subsectionScore}>{subRes.score} / {subRes.max}</Text>
+                            </View>
 
-                  {/* Student presentation tabs */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.tabScrollView}
-                    contentContainerStyle={styles.tabBar}
-                  >
-                    {group.members.map((member) => {
-                      const isActive = member === activeStudentTab;
-                      const studentPresentations = ev.studentPresentations || [];
-                      const sEval = studentPresentations.find(p => p.studentName === member);
-                      const sTotal = sEval ? sEval.criteria.reduce((sum, c) => sum + c.score, 0) : 0;
-                      const sMax = sEval ? sEval.criteria.reduce((sum, c) => sum + c.maxPoints, 0) : 40;
+                            {subsection.criteria.map((criterion) => {
+                              const matchingChapter = ev.chapters.find(ch => ch.chapter === subsection.title);
+                              const matchingCrit = matchingChapter?.criteria.find(c => c.criterion === criterion.id);
+                              const score = matchingCrit ? matchingCrit.score : 0;
+                              const comment = matchingCrit ? matchingCrit.comment : '';
+
+                              return (
+                                <CriterionCard
+                                  key={criterion.id}
+                                  criterion={criterion}
+                                  score={score}
+                                  comment={comment}
+                                  isWide={isWide}
+                                />
+                              );
+                            })}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  );
+                })}
+
+                {/* ORAL DEFENSE PRESENTATION SECTION */}
+                <View style={styles.sectionContainer}>
+                  <View style={[styles.sectionBarHeader, { backgroundColor: '#1f2937' }]}>
+                    <Ionicons name="ribbon-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.sectionBarTitle}>ORAL DEFENSE PRESENTATION</Text>
+                    <View style={styles.sectionScoreBadge}>
+                      <Text style={styles.sectionScoreBadgeText}>Individual</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.studentTabsScrollWrapper}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.studentTabsScroll}>
+                      {group.members.map((member) => {
+                        const isActive = activeStudentTab === member;
+                        const total = getStudentPresentationTotal(member);
+                        const max = getStudentPresentationMax(member);
+                        return (
+                          <Pressable
+                            key={member}
+                            onPress={() => setActiveStudentTab(member)}
+                            style={[styles.studentTabBtn, isActive && styles.studentTabBtnActive]}
+                          >
+                            <Ionicons name="person-outline" size={16} color={isActive ? '#fff' : '#4b5563'} style={{ marginRight: 6 }} />
+                            <Text style={[styles.studentTabBtnText, isActive && styles.studentTabBtnTextActive]}>
+                              {member} ({total}/{max})
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+
+                  <View style={{ padding: 16 }}>
+                    {presentationCriteria.map((criterion) => {
+                      const studentData = ev.studentPresentations?.find(s => s.studentName === activeStudentTab);
+                      const matchingCrit = studentData?.criteria.find(c => c.criterion === criterion.id);
+                      const score = matchingCrit ? matchingCrit.score : 0;
+                      const comment = matchingCrit ? matchingCrit.comment : '';
 
                       return (
-                        <TouchableOpacity
-                          key={member}
-                          style={[
-                            styles.tab,
-                            isActive && styles.tabActive,
-                          ]}
-                          onPress={() => setActiveStudentTab(member)}
-                          accessibilityRole="tab"
-                          accessibilityState={{ selected: isActive }}
-                          accessibilityLabel={`${member} presentation score tab`}
-                        >
-                          <View style={[styles.tabAvatar, isActive && styles.tabAvatarActive]}>
-                            <Text style={[styles.tabAvatarText, isActive && styles.tabAvatarTextActive]}>
-                              {member.charAt(0)}
-                            </Text>
-                          </View>
-                          <Text
-                            style={[styles.tabLabel, isActive && styles.tabLabelActive]}
-                            numberOfLines={1}
-                          >
-                            {member} ({sTotal}/{sMax})
-                          </Text>
-                        </TouchableOpacity>
+                        <CriterionCard
+                          key={criterion.id}
+                          criterion={criterion}
+                          score={score}
+                          comment={comment}
+                          isWide={isWide}
+                        />
                       );
                     })}
-                  </ScrollView>
+                  </View>
+                </View>
 
-                  {/* Tabular view of presentation scores */}
-                  {(() => {
-                    const presentations = ev.studentPresentations || [];
-                    const studentPresentation = presentations.find(p => p.studentName === activeStudentTab);
-                    const presentationCriteriaList = studentPresentation ? studentPresentation.criteria : [
-                      { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 0, comment: "N/A" },
-                      { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 0, comment: "N/A" },
-                      { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 0, comment: "N/A" }
-                    ];
-                    
-                    const presTotal = presentationCriteriaList.reduce((s, c) => s + c.score, 0);
-                    const presMax = presentationCriteriaList.reduce((s, c) => s + c.maxPoints, 0);
-
-                    return (
-                      <View style={styles.chapterBlock}>
-                        {/* Table header */}
-                        <View style={styles.tableHeaderRow}>
-                          <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Criterion</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center' }]}>Points</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 3.5 }]}>Description</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center' }]}>Score</Text>
-                          <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Comment</Text>
-                        </View>
-
-                        {/* Criteria rows */}
-                        {presentationCriteriaList.map((criterion, cIdx) => (
-                          <View key={cIdx} style={[styles.tableRow, cIdx % 2 === 1 && styles.tableRowAlt]}>
-                            <Text style={[styles.tableCellBold, { flex: 2 }]}>{criterion.criterion}</Text>
-                            <Text style={[styles.tableCellCenter, { flex: 0.8 }]}>{criterion.maxPoints}</Text>
-                            <Text style={[styles.tableCellDesc, { flex: 3.5 }]}>{criterion.description}</Text>
-                            <View style={[styles.tableCellScoreWrap, { flex: 0.8 }]}>
-                              <View style={[
-                                styles.scoreBadge,
-                                { backgroundColor: getScoreBgColor(criterion.score, criterion.maxPoints) }
-                              ]}>
-                                <Text style={[
-                                  styles.scoreBadgeText,
-                                  { color: getScoreTextColor(criterion.score, criterion.maxPoints) }
-                                ]}>
-                                  {criterion.score}
-                                </Text>
-                              </View>
-                            </View>
-                            <Text style={[styles.tableCellComment, { flex: 3 }]}>{criterion.comment}</Text>
-                          </View>
-                        ))}
-
-                        {/* Presentation total row */}
-                        <View style={styles.chapterTotalRow}>
-                          <Text style={[styles.chapterTotalLabel, { flex: 3.5 }]}>Presentation Total</Text>
-                          <Text style={[styles.chapterTotalMax, { flex: 5 }]}>Max: {presMax} points</Text>
-                          <View style={[styles.tableCellScoreWrap, { flex: 1 }]}>
-                            <View style={styles.chapterTotalBadge}>
-                              <Text style={styles.chapterTotalBadgeText}>{presTotal}</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })()}
-
-                  {/* Comments */}
-                  {ev.comments ? (
-                    <View style={styles.evalCommentBox}>
-                      <Text style={styles.evalCommentTitle}>Panelist Comments:</Text>
-                      <Text style={styles.evalComment}>{ev.comments}</Text>
-                    </View>
-                  ) : null}
+                {/* REMARKS/COMMENTS SECTION */}
+                <View style={styles.sectionContainer}>
+                  <View style={[styles.sectionBarHeader, { backgroundColor: '#374151' }]}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.sectionBarTitle}>REMARKS / COMMENTS / RECOMMENDATIONS</Text>
+                  </View>
+                  <View style={{ padding: 16 }}>
+                    <TextInput
+                      style={styles.generalCommentsInput}
+                      value={ev.comments}
+                      placeholder="No general remarks or comments provided by this panelist."
+                      multiline
+                      numberOfLines={6}
+                      textAlignVertical="top"
+                      editable={false}
+                    />
+                  </View>
                 </View>
               </View>
             );
@@ -882,5 +928,226 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.semiBold,
     fontSize: Typography.fontSize.sm,
     color: '#fff',
+  },
+  sectionContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  sectionBarHeader: {
+    backgroundColor: '#111827',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  sectionBarTitle: {
+    color: '#fff',
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: Typography.fontSize.sm,
+    marginLeft: 4,
+    flex: 1,
+  },
+  sectionScoreBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  sectionScoreBadgeText: {
+    color: '#fff',
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 12,
+  },
+  subsectionContainer: {
+    margin: 16,
+  },
+  subsectionHeader: {
+    backgroundColor: '#f97316',
+    padding: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  subsectionTitle: {
+    color: '#fff',
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 14,
+  },
+  subsectionScore: {
+    color: '#c2410c',
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 999,
+    fontSize: 12,
+    fontFamily: Typography.fontFamily.bold,
+  },
+  criterionContainer: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  criterionRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  critLeftCol: {
+    backgroundColor: '#1e293b',
+    padding: 16,
+    minHeight: 120,
+  },
+  critPointsText: {
+    fontSize: 24,
+    fontFamily: Typography.fontFamily.bold,
+    color: '#ea580c',
+    marginBottom: 8,
+  },
+  critNameText: {
+    fontSize: 12,
+    color: '#fff',
+    lineHeight: 16,
+    fontFamily: Typography.fontFamily.medium,
+  },
+  levelCol: {
+    padding: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#e5e7eb',
+    backgroundColor: '#fff',
+  },
+  levelColSelected: {
+    backgroundColor: '#ffedd5',
+  },
+  levelHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  radioCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#9ca3af',
+    marginRight: 6,
+    backgroundColor: '#fff',
+  },
+  radioCircleSelected: {
+    borderColor: '#ea580c',
+    borderWidth: 4,
+  },
+  levelTitle: {
+    fontSize: 12,
+    fontFamily: Typography.fontFamily.bold,
+    color: '#ea580c',
+  },
+  levelTitleSelected: {
+    color: '#c2410c',
+  },
+  levelDescText: {
+    fontSize: 11,
+    color: '#4b5563',
+    lineHeight: 16,
+    fontFamily: Typography.fontFamily.regular,
+  },
+  critRightCol: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  scoreNumberInput: {
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    width: '100%',
+    textAlign: 'center',
+    fontSize: 16,
+    fontFamily: Typography.fontFamily.bold,
+    color: '#ea580c',
+    backgroundColor: '#fff',
+    marginBottom: 4,
+  },
+  maxScoreText: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontFamily: Typography.fontFamily.medium,
+  },
+  commentRow: {
+    padding: 12,
+    backgroundColor: '#fff',
+  },
+  commentLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  commentLabelText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 6,
+    fontFamily: Typography.fontFamily.medium,
+  },
+  commentTextInput: {
+    borderWidth: 1,
+    borderColor: '#ea580c',
+    borderRadius: 6,
+    padding: 10,
+    fontSize: 13,
+    color: '#374151',
+    backgroundColor: '#fff',
+    minHeight: 40,
+    fontFamily: Typography.fontFamily.regular,
+  },
+  studentTabsScrollWrapper: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#f3f4f6',
+  },
+  studentTabsScroll: {
+    paddingHorizontal: 16,
+  },
+  studentTabBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+    marginRight: 8,
+  },
+  studentTabBtnActive: {
+    borderBottomColor: '#ea580c',
+    backgroundColor: '#ea580c',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  studentTabBtnText: {
+    color: '#4b5563',
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 14,
+  },
+  studentTabBtnTextActive: {
+    color: '#fff',
+  },
+  generalCommentsInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#374151',
+    backgroundColor: '#fff',
+    minHeight: 120,
+    fontFamily: Typography.fontFamily.regular,
   },
 });
