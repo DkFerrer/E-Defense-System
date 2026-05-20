@@ -46,6 +46,7 @@ export default function ResearchGroupDetailScreen() {
     ? Math.round(evaluations.reduce((sum, e) => sum + e.totalScore, 0) / evaluations.length)
     : 0;
   const [activeTab, setActiveTab] = useState(0);
+  const [activeStudentTab, setActiveStudentTab] = useState('');
   const { logActivity } = useAppData();
 
   useEffect(() => {
@@ -58,6 +59,12 @@ export default function ResearchGroupDetailScreen() {
       );
     }
   }, [id]);
+
+  useEffect(() => {
+    if (group && group.members && group.members.length > 0 && !activeStudentTab) {
+      setActiveStudentTab(group.members[0]);
+    }
+  }, [group]);
 
   if (!group) {
     return (
@@ -288,6 +295,112 @@ export default function ResearchGroupDetailScreen() {
                       </View>
                     );
                   })}
+
+                  {/* ORAL DEFENSE PRESENTATION */}
+                  <Text style={[styles.rubricTitle, { marginTop: 12 }]}>ORAL DEFENSE PRESENTATION</Text>
+
+                  {/* Student presentation tabs */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.tabScrollView}
+                    contentContainerStyle={styles.tabBar}
+                  >
+                    {group.members.map((member) => {
+                      const isActive = member === activeStudentTab;
+                      const studentPresentations = ev.studentPresentations || [];
+                      const sEval = studentPresentations.find(p => p.studentName === member);
+                      const sTotal = sEval ? sEval.criteria.reduce((sum, c) => sum + c.score, 0) : 0;
+                      const sMax = sEval ? sEval.criteria.reduce((sum, c) => sum + c.maxPoints, 0) : 40;
+
+                      return (
+                        <TouchableOpacity
+                          key={member}
+                          style={[
+                            styles.tab,
+                            isActive && styles.tabActive,
+                          ]}
+                          onPress={() => setActiveStudentTab(member)}
+                          accessibilityRole="tab"
+                          accessibilityState={{ selected: isActive }}
+                          accessibilityLabel={`${member} presentation score tab`}
+                        >
+                          <View style={[styles.tabAvatar, isActive && styles.tabAvatarActive]}>
+                            <Text style={[styles.tabAvatarText, isActive && styles.tabAvatarTextActive]}>
+                              {member.charAt(0)}
+                            </Text>
+                          </View>
+                          <Text
+                            style={[styles.tabLabel, isActive && styles.tabLabelActive]}
+                            numberOfLines={1}
+                          >
+                            {member} ({sTotal}/{sMax})
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {/* Tabular view of presentation scores */}
+                  {(() => {
+                    const presentations = ev.studentPresentations || [];
+                    const studentPresentation = presentations.find(p => p.studentName === activeStudentTab);
+                    const presentationCriteriaList = studentPresentation ? studentPresentation.criteria : [
+                      { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 0, comment: "N/A" },
+                      { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 0, comment: "N/A" },
+                      { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 0, comment: "N/A" }
+                    ];
+                    
+                    const presTotal = presentationCriteriaList.reduce((s, c) => s + c.score, 0);
+                    const presMax = presentationCriteriaList.reduce((s, c) => s + c.maxPoints, 0);
+
+                    return (
+                      <View style={styles.chapterBlock}>
+                        {/* Table header */}
+                        <View style={styles.tableHeaderRow}>
+                          <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Criterion</Text>
+                          <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center' }]}>Points</Text>
+                          <Text style={[styles.tableHeaderCell, { flex: 3.5 }]}>Description</Text>
+                          <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center' }]}>Score</Text>
+                          <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Comment</Text>
+                        </View>
+
+                        {/* Criteria rows */}
+                        {presentationCriteriaList.map((criterion, cIdx) => (
+                          <View key={cIdx} style={[styles.tableRow, cIdx % 2 === 1 && styles.tableRowAlt]}>
+                            <Text style={[styles.tableCellBold, { flex: 2 }]}>{criterion.criterion}</Text>
+                            <Text style={[styles.tableCellCenter, { flex: 0.8 }]}>{criterion.maxPoints}</Text>
+                            <Text style={[styles.tableCellDesc, { flex: 3.5 }]}>{criterion.description}</Text>
+                            <View style={[styles.tableCellScoreWrap, { flex: 0.8 }]}>
+                              <View style={[
+                                styles.scoreBadge,
+                                { backgroundColor: getScoreBgColor(criterion.score, criterion.maxPoints) }
+                              ]}>
+                                <Text style={[
+                                  styles.scoreBadgeText,
+                                  { color: getScoreTextColor(criterion.score, criterion.maxPoints) }
+                                ]}>
+                                  {criterion.score}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text style={[styles.tableCellComment, { flex: 3 }]}>{criterion.comment}</Text>
+                          </View>
+                        ))}
+
+                        {/* Presentation total row */}
+                        <View style={styles.chapterTotalRow}>
+                          <Text style={[styles.chapterTotalLabel, { flex: 3.5 }]}>Presentation Total</Text>
+                          <Text style={[styles.chapterTotalMax, { flex: 5 }]}>Max: {presMax} points</Text>
+                          <View style={[styles.tableCellScoreWrap, { flex: 1 }]}>
+                            <View style={styles.chapterTotalBadge}>
+                              <Text style={styles.chapterTotalBadgeText}>{presTotal}</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })()}
 
                   {/* Comments */}
                   {ev.comments ? (

@@ -109,6 +109,10 @@ export interface PanelistEvaluation {
   panelist: string;
   totalScore: number;
   chapters: EvaluationChapter[];
+  studentPresentations?: {
+    studentName: string;
+    criteria: EvaluationCriterion[];
+  }[];
   comments: string;
 }
 
@@ -131,6 +135,24 @@ export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
           { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Coherent and identifies key gaps." },
         ]},
       ],
+      studentPresentations: [
+        {
+          studentName: "Sarah Williams",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Excellent presentation flow." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Very strong understanding of smart contracts." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Answered testing questions cleanly." }
+          ]
+        },
+        {
+          studentName: "Michael Brown",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 7, comment: "Good presentation but read a bit from slides." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Strong knowledge of the architecture." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 12, comment: "Answered database queries well." }
+          ]
+        }
+      ]
     },
     {
       panelist: "Dr. Roberto Santos", totalScore: 80,
@@ -149,6 +171,24 @@ export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
           { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 26, comment: "Missing clear research gap identification." },
         ]},
       ],
+      studentPresentations: [
+        {
+          studentName: "Sarah Williams",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Highly articulate and professional." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Clear explanation of technical concepts." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 12, comment: "Handled security questions well." }
+          ]
+        },
+        {
+          studentName: "Michael Brown",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 7, comment: "Clear slides but pacing was slightly fast." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 11, comment: "Understands user management systems thoroughly." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 11, comment: "Struggled slightly on optimization answers." }
+          ]
+        }
+      ]
     },
     {
       panelist: "Dr. Maria Garcia", totalScore: 81,
@@ -167,6 +207,24 @@ export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
           { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 24, comment: "Could be more concise and focused." },
         ]},
       ],
+      studentPresentations: [
+        {
+          studentName: "Sarah Williams",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Excellent posture and slides structure." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Demonstrated solid technical skill." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 12, comment: "Polite and accurate answers." }
+          ]
+        },
+        {
+          studentName: "Michael Brown",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 7, comment: "Presented with confidence. Good energy." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Solid overview of core technologies." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Gave concrete examples during Q&A." }
+          ]
+        }
+      ]
     },
   ],
   "2": [
@@ -187,6 +245,32 @@ export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
           { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Clear identification of research gaps." },
         ]},
       ],
+      studentPresentations: [
+        {
+          studentName: "John Doe",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Articulate speaker with strong slides." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 14, comment: "Deep understanding of the neural networks used." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Answered complex algorithmic questions with ease." }
+          ]
+        },
+        {
+          studentName: "Jane Smith",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Incredibly professional and engaging." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 15, comment: "Perfect mastery of system integrations." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 15, comment: "Masterful responses, cited sources effortlessly." }
+          ]
+        },
+        {
+          studentName: "Mark Johnson",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Solid presentation, kept within time limit." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Excellent understanding of the training datasets." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Handled database and hosting questions well." }
+          ]
+        }
+      ]
     },
   ],
   "3": [
@@ -207,6 +291,24 @@ export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
           { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Well-synthesized with clear direction." },
         ]},
       ],
+      studentPresentations: [
+        {
+          studentName: "Anna Lee",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Good tone and presentation flow." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Strong knowledge of agricultural supply chains." },
+            { criterion: "Response to Questions", maxPoints: 14, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Confident answers about market entry." }
+          ]
+        },
+        {
+          studentName: "Thomas Clark",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Polished slides, very good interaction." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 12, comment: "Solid overview of payment gateways used." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Handled security and privacy queries well." }
+          ]
+        }
+      ]
     },
   ],
   "4": [
@@ -227,6 +329,32 @@ export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
           { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 29, comment: "Outstanding synthesis with clear contributions." },
         ]},
       ],
+      studentPresentations: [
+        {
+          studentName: "Carlos Rivera",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Engaging delivery and clear pacing." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 15, comment: "Masterful IoT architecture explanation." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Answered network latency questions brilliantly." }
+          ]
+        },
+        {
+          studentName: "Jessica Park",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 10, comment: "Perfect presentation delivery." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 15, comment: "Invaluable technical contribution." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 15, comment: "Outstanding responses. Handled questions like an expert." }
+          ]
+        },
+        {
+          studentName: "David Kim",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Well-structured slides, very professional." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 14, comment: "Strong understanding of traffic models." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 14, comment: "Gave clear answers to hardware integration questions." }
+          ]
+        }
+      ]
     },
   ],
   "5": [
@@ -247,6 +375,24 @@ export const mockPanelistEvaluations: Record<string, PanelistEvaluation[]> = {
           { criterion: "Synthesis", maxPoints: 30, description: "Summarized critical points from literature.", score: 27, comment: "Good synthesis linking theory to practice." },
         ]},
       ],
+      studentPresentations: [
+        {
+          studentName: "Maria Reyes",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 9, comment: "Presented with great clarity and poise." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 14, comment: "Excellent command over dataset details." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Handled data cleaning questions expertly." }
+          ]
+        },
+        {
+          studentName: "Luis Santos",
+          criteria: [
+            { criterion: "Organization and Delivery", maxPoints: 10, description: "Presentation is clear, logically structured, and professionally delivered.", score: 8, comment: "Strong slides, very good engagement." },
+            { criterion: "Technical Depth & Mastery", maxPoints: 15, description: "Demonstrates comprehensive technical knowledge and project understanding.", score: 13, comment: "Very good understanding of predictive model outputs." },
+            { criterion: "Response to Questions", maxPoints: 15, description: "Answers panel questions clearly, precisely, and confidently.", score: 13, comment: "Handled panel inquiries on model accuracy well." }
+          ]
+        }
+      ]
     },
   ],
 };

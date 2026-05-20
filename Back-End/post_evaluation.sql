@@ -47,3 +47,24 @@ CREATE TABLE IF NOT EXISTS `report_panelists` (
     REFERENCES `consolidated_reports` (`id`)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Seed Data: consolidated_reports ─────────────────────────
+INSERT INTO `consolidated_reports` 
+  (`id`, `group_id`, `group_title`, `members`, `adviser`, `program`, `department`, `defense_date`, `stage`, `total_final_grade`, `grade_label`, `chair_name`, `chair_verdict`, `chair_approved`, `date_finalized`, `created_at`, `updated_at`)
+VALUES
+  (1, '1', 'Blockchain-Based Student Records Management System', '["Sarah Williams", "Michael Brown"]', 'Dr. Maria Santos', 'BS Information Technology', 'School of Computer and Information Sciences', '2025-12-15', 'Review Defense', 82.00, 'Very Good', 'Dr. Elena Cruz', 'Good implementation of blockchain concepts. Needs improvement in security aspects.', 1, '2025-12-15', NOW(), NOW()),
+  (2, '2', 'AI-Powered Learning Management System for Remote Education', '["John Doe", "Jane Smith", "Mark Johnson"]', 'Dr. Robert Lee', 'BS Computer Science', 'School of Computer and Information Sciences', '2025-12-15', 'Title Defense', 93.00, 'Excellent', 'Dr. Elena Cruz', 'Excellent AI integration and innovative approach to remote learning.', 1, '2025-12-15', NOW(), NOW()),
+  (3, '3', 'E-Commerce Platform for Local Agricultural Products', '["Anna Lee", "Thomas Clark"]', 'Dr. Maria Santos', 'BS Information Technology', 'School of Computer and Information Sciences', '2025-12-16', 'Final Defense', 88.00, 'Very Good', 'Dr. Elena Cruz', 'Strong business model with good market analysis.', 1, '2025-12-16', NOW(), NOW())
+ON DUPLICATE KEY UPDATE `group_id` = VALUES(`group_id`);
+
+-- ── Seed Data: report_panelists ──────────────────────────────
+INSERT INTO `report_panelists`
+  (`id`, `report_id`, `panelist_name`, `score`, `remarks`, `is_chair`)
+VALUES
+  (1, 1, 'Dr. Elena Cruz', 85.00, 'Good implementation of blockchain concepts. Needs improvement in security aspects.', 1),
+  (2, 1, 'Dr. Roberto Santos', 80.00, 'Solid technical foundation. User interface could be more intuitive.', 0),
+  (3, 1, 'Dr. Maria Garcia', 81.00, 'Well-structured research. Consider adding more test cases.', 0),
+  (4, 2, 'Dr. Elena Cruz', 93.00, 'Excellent AI integration and innovative approach to remote learning.', 1),
+  (5, 3, 'Dr. Elena Cruz', 88.00, 'Strong business model with good market analysis.', 1)
+ON DUPLICATE KEY UPDATE `panelist_name` = VALUES(`panelist_name`);
+
