@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   useWindowDimensions,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import TopNav from '../components/TopNav';
