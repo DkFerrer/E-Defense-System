@@ -36,13 +36,16 @@ export default function LoginScreen() {
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
 
+  const [loginAs, setLoginAs] = useState('Panelist');
   const [username, setUsername] = useState('23-181818');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showRolePicker, setShowRolePicker] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const ROLES = ['Panelist', 'Dean', 'Research Coordinator', 'Adviser', 'Student', 'Admin'];
 
   const handleSubmit = async () => {
     setError('');
@@ -56,7 +59,7 @@ export default function LoginScreen() {
       await login({
         username,
         password,
-        role: 'Panelist',
+        role: loginAs,
       });
     } catch (e) {
       setError(e.message || 'Login failed. Please check your credentials.');
@@ -75,6 +78,8 @@ export default function LoginScreen() {
           <LeftPanel isWide={isWide} />
           <RightPanel 
             isWide={isWide}
+            loginAs={loginAs}
+            setLoginAs={setLoginAs}
             username={username}
             setUsername={setUsername}
             password={password}
@@ -84,7 +89,10 @@ export default function LoginScreen() {
             error={error}
             busy={busy}
             handleSubmit={handleSubmit}
+            showRolePicker={showRolePicker}
+            setShowRolePicker={setShowRolePicker}
             setShowForgotPassword={setShowForgotPassword}
+            ROLES={ROLES}
           />
         </View>
       </ScrollView>
@@ -148,6 +156,8 @@ const LeftPanel = ({ isWide }) => (
 
 const RightPanel = ({ 
   isWide, 
+  loginAs, 
+  setLoginAs, 
   username, 
   setUsername, 
   password, 
@@ -157,11 +167,26 @@ const RightPanel = ({
   error, 
   busy, 
   handleSubmit, 
-  setShowForgotPassword
+  showRolePicker, 
+  setShowRolePicker, 
+  setShowForgotPassword,
+  ROLES 
 }) => (
   <View style={[styles.rightPanel, !isWide && styles.rightPanelMobile]}>
     <View style={styles.formContainer}>
       <Text style={styles.formHeading}>Enter your username and password to continue.</Text>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Login As:</Text>
+        <TouchableOpacity 
+          style={styles.dropdownWrapper} 
+          onPress={() => setShowRolePicker(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.dropdownValue}>{loginAs}</Text>
+          <ChevronDown size={20} color="#6b7280" />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Username:</Text>
@@ -209,6 +234,31 @@ const RightPanel = ({
         <ArrowRight size={20} color="#1e3a8a" />
       </TouchableOpacity>
     </View>
+
+    <Modal visible={showRolePicker} transparent animationType="fade">
+      <Pressable style={styles.modalOverlay} onPress={() => setShowRolePicker(false)}>
+        <View style={styles.pickerBox}>
+          <Text style={styles.pickerTitle}>Select Role</Text>
+          <ScrollView>
+            {ROLES.map((role) => (
+              <TouchableOpacity
+                key={role}
+                style={[styles.pickerItem, loginAs === role && styles.pickerItemActive]}
+                onPress={() => {
+                  setLoginAs(role);
+                  setShowRolePicker(false);
+                }}
+              >
+                <Text style={[styles.pickerItemText, loginAs === role && styles.pickerItemTextActive]}>
+                  {role}
+                </Text>
+                {loginAs === role && <UserCheck size={18} color="#2563eb" />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </Pressable>
+    </Modal>
   </View>
 );
 

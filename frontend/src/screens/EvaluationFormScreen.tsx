@@ -475,16 +475,12 @@ export default function EvaluationFormScreen() {
             <View
               style={[
                 styles.roleBadge,
-                { backgroundColor: isChairman ? '#fff1f2' : '#fff7ed' },
+                { backgroundColor: '#fff7ed' },
               ]}
             >
-              {isChairman ? (
-                <Star size={14} color="#e11d48" style={{ marginRight: 4 }} />
-              ) : (
-                <UserCheck size={14} color="#ea580c" style={{ marginRight: 4 }} />
-              )}
-              <Text style={[styles.roleText, { color: isChairman ? '#e11d48' : '#ea580c' }]}>
-                {isChairman ? 'Panel Chairman' : 'Panel Member'}
+              <UserCheck size={14} color="#ea580c" style={{ marginRight: 4 }} />
+              <Text style={[styles.roleText, { color: '#ea580c' }]}>
+                Panel Member
               </Text>
             </View>
           </View>
