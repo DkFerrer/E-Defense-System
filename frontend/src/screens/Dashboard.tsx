@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import {
   Search,
   Users,
@@ -41,7 +42,8 @@ const DEPARTMENTS = {
 
 const { width } = Dimensions.get('window');
 
-export default function DashboardScreen({ navigation }) {
+export default function DashboardScreen() {
+  const router = useRouter();
   const { user: currentUser } = useApp();
   const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,14 +127,7 @@ export default function DashboardScreen({ navigation }) {
 
   useEffect(() => {
     loadEvaluations();
-    
-    if (navigation) {
-      const unsubscribe = navigation.addListener('focus', () => {
-        loadEvaluations();
-      });
-      return unsubscribe;
-    }
-  }, [navigation]);
+  }, []);
 
   useEffect(() => {
     if (departmentFilter !== 'All Departments') {
@@ -176,7 +171,7 @@ export default function DashboardScreen({ navigation }) {
   };
 
   const handleCardPress = (ev) => {
-    navigation.navigate('EvaluationForm', { group: ev });
+    router.push({ pathname: '/evaluation', params: { group: JSON.stringify(ev) } });
   };
 
   if (loading) {

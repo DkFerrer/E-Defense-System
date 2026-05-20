@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import Sidebar from '../components/Sidebar';
 import TopNav from '../components/TopNav';
 import DashboardScreen from './Dashboard';
@@ -20,7 +21,8 @@ import { useApp } from '../context/AppContext';
 const MD_MIN = 768;
 const SIDEBAR_BG = '#212121';
 
-export default function MainShell({ navigation, route }) {
+export default function MainShell() {
+  const params = useLocalSearchParams();
   const { user, logout } = useApp();
   const { width } = useWindowDimensions();
   const isDesktop = width >= MD_MIN;
@@ -29,10 +31,10 @@ export default function MainShell({ navigation, route }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   React.useEffect(() => {
-    if (route?.params?.activeNavId) {
-      setActiveNavId(route.params.activeNavId);
+    if (params?.activeNavId) {
+      setActiveNavId(params.activeNavId);
     }
-  }, [route?.params?.activeNavId]);
+  }, [params?.activeNavId]);
 
 
   const onNavigate = useCallback(
@@ -58,7 +60,7 @@ export default function MainShell({ navigation, route }) {
 
         <View style={styles.main} accessibilityRole="main">
           {activeNavId === 'schedule' ? <ScheduleScreen onNavigate={onNavigate} /> : null}
-          {activeNavId === 'evaluation' ? <DashboardScreen navigation={navigation} /> : null}
+          {activeNavId === 'evaluation' ? <DashboardScreen /> : null}
           {activeNavId === 'rubrics' ? <RubricsScreen /> : null}
           {activeNavId === 'results' ? <ResultsScreen /> : null}
           {activeNavId === 'profile' ? <ProfileScreen /> : null}

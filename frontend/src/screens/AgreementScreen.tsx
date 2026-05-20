@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PenTool, CheckCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
-export default function AgreementScreen({ navigation }) {
+export default function AgreementScreen() {
+  const router = useRouter();
   const [signed, setSigned] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -15,7 +17,7 @@ export default function AgreementScreen({ navigation }) {
     try {
       const hasSigned = await AsyncStorage.getItem('has_signed_agreement');
       if (hasSigned === 'true') {
-        navigation.replace('Main', { activeNavId: 'schedule' });
+        router.replace({ pathname: '/main', params: { activeNavId: 'schedule' } });
       } else {
         setLoading(false);
       }
@@ -28,7 +30,7 @@ export default function AgreementScreen({ navigation }) {
     setSigned(true);
     await AsyncStorage.setItem('has_signed_agreement', 'true');
     setTimeout(() => {
-      navigation.replace('Main', { activeNavId: 'schedule' });
+      router.replace({ pathname: '/main', params: { activeNavId: 'schedule' } });
     }, 1000);
   };
 

@@ -128,7 +128,7 @@ export async function getRubrics() {
   if (isMockBackend()) {
     return { rubrics: [...rubrics] };
   }
-  const { data } = await api.get('/rubrics');
+  const { data } = await api.get('/rubrics.php');
   return data;
 }
 
@@ -174,7 +174,7 @@ export async function createEvaluation(evaluationData) {
     }
   }
   // Real API call
-  const { data } = await api.post('/evaluations', evaluationData);
+  const { data } = await api.post('/evaluations.php', evaluationData);
   return data;
 }
 
@@ -188,7 +188,7 @@ export async function getEvaluations() {
     }
   }
   // Real API call
-  const { data } = await api.get('/evaluations');
+  const { data } = await api.get('/evaluations.php');
   return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
 }
 
@@ -213,7 +213,7 @@ export async function createOrUpdateResult(resultData) {
     }
   }
   // Real API call (Result update is usually handled by evaluation completion in backend, but we'll provide the endpoint)
-  const { data } = await api.post('/results', resultData);
+  const { data } = await api.post('/results.php', resultData);
   return data;
 }
 
@@ -227,7 +227,7 @@ export async function getResults() {
     }
   }
   // Real API call
-  const { data } = await api.get('/results');
+  const { data } = await api.get('/results.php');
   return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
 }
 
@@ -322,7 +322,7 @@ export async function getBookings() {
       }
     ];
   }
-  const { data } = await api.get('/bookings');
+  const { data } = await api.get('/bookings.php');
   return data;
 }
 
@@ -388,7 +388,7 @@ export async function getEvaluationRubricBundle(evaluationId) {
       return null;
     }
   }
-  const { data } = await api.get(`/evaluations/${evaluationId}/rubric-bundle`);
+  const { data } = await api.get(`/rubric-bundle.php?id=${evaluationId}`);
   return data;
 }
 
@@ -403,7 +403,7 @@ export async function upsertEvaluationSubmission(evaluationId, submissionData) {
       throw e;
     }
   }
-  const { data } = await api.put(`/evaluations/${evaluationId}/submission`, submissionData);
+  const { data } = await api.put(`/submission.php?id=${evaluationId}`, submissionData);
   return data;
 }
 
@@ -485,7 +485,7 @@ export async function getEvaluationResults() {
       return [];
     }
   }
-  const { data } = await api.get('/evaluations/results');
+  const { data } = await api.get('/results.php');
   return data;
 }
 
@@ -493,7 +493,7 @@ export async function updateBookingStatus(id, status, reason = '') {
   if (isMockBackend()) {
     return { success: true };
   }
-  const { data } = await api.put(`/bookings/${id}/status`, { status, decline_reason: reason });
+  const { data } = await api.put(`/booking-status.php?id=${id}`, { status, decline_reason: reason });
   return data;
 }
 

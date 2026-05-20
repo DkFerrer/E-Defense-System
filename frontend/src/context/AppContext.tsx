@@ -41,7 +41,7 @@ export function AppProvider({ children }) {
       setUser(userPayload);
       return { token, user: userPayload };
     }
-    const { data } = await api.post('/login', { username, password, role, system });
+    const { data } = await api.post('/login.php', { username, password, role, system });
     setBearerToken(data.token);
     setToken(data.token);
     setUser(data.user ?? { ...DEMO_USER, name: data.user?.name ?? username });

@@ -10,8 +10,8 @@ import {
   Platform,
   ActivityIndicator,
   useWindowDimensions,
-  Modal,
 } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import TopNav from '../components/TopNav';
 import Sidebar from '../components/Sidebar';
 import {
@@ -144,9 +144,18 @@ const CriterionCard = React.memo(({ criterion, score, comment, onScoreChange, on
          prevProps.criterion.id === nextProps.criterion.id;
 });
 
-export default function EvaluationFormScreen({ navigation, route }) {
+export default function EvaluationFormScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
   const { user: currentUser, logout } = useApp();
-  const group = route?.params?.group;
+  
+  let group;
+  try {
+    group = params?.group ? JSON.parse(params.group) : null;
+  } catch (e) {
+    group = null;
+  }
+
   const evaluation = group?.evaluation;
 
   const [loading, setLoading] = useState(true);
@@ -168,8 +177,8 @@ export default function EvaluationFormScreen({ navigation, route }) {
   const [confirmAction, setConfirmAction] = useState(null);
 
   const onNavigate = useCallback((navId) => {
-    navigation.navigate('Main', { activeNavId: navId });
-  }, [navigation]);
+    router.push({ pathname: '/main', params: { activeNavId: navId } });
+  }, [router]);
 
   const onToggleSidebar = useCallback(() => {
     setSidebarOpen((o) => !o);
@@ -392,7 +401,7 @@ export default function EvaluationFormScreen({ navigation, route }) {
 
       if (status === 'submitted') {
         showAlert('Success', 'Evaluation submitted successfully!');
-        navigation.navigate('Main', { activeNavId: 'results' });
+        router.push({ pathname: '/main', params: { activeNavId: 'results' } });
       } else {
         showAlert('Success', 'Draft saved successfully!');
       }
@@ -408,7 +417,7 @@ export default function EvaluationFormScreen({ navigation, route }) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Invalid evaluation data.</Text>
-        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </Pressable>
       </View>
@@ -441,7 +450,7 @@ export default function EvaluationFormScreen({ navigation, route }) {
           <ScrollView style={styles.container} contentContainerStyle={styles.formScroll}>
         {/* Header */}
         <View style={styles.formHeader}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backLink}>
+          <Pressable onPress={() => router.back()} style={styles.backLink}>
             <View style={styles.backLinkContent}>
               <ArrowLeft size={16} color="#6b7280" />
               <Text style={styles.backLinkText}>Back to List</Text>
