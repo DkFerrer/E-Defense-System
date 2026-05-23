@@ -1,4 +1,38 @@
+import { Platform } from 'react-native';
 import { sections, presentationCriteria } from './evaluationRubric';
+
+let memoryStorage: Record<string, string> = {};
+
+export const getStorageItem = (key: string): string | null => {
+  if (Platform.OS === 'web') {
+    return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+  }
+  return memoryStorage[key] || null;
+};
+
+export const setStorageItem = (key: string, value: string) => {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') localStorage.setItem(key, value);
+  } else {
+    memoryStorage[key] = value;
+  }
+};
+
+export const removeStorageItem = (key: string) => {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') localStorage.removeItem(key);
+  } else {
+    delete memoryStorage[key];
+  }
+};
+
+export const clearStorage = () => {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') localStorage.clear();
+  } else {
+    memoryStorage = {};
+  }
+};
 
 export type DefenseStage = 'Review Defense' | 'Title Defense' | 'Final Defense';
 
@@ -23,6 +57,132 @@ export const DEFENSE_STAGES: DefenseStage[] = [
   'Review Defense',
   'Title Defense',
   'Final Defense',
+];
+
+export interface Booking {
+  id: number;
+  research_title: string;
+  members: string[];
+  adviser_name: string;
+  department: string;
+  program: string;
+  year_level: string;
+  semester: string;
+  academic_year: string;
+  requested_date: string;
+  requested_time: string;
+  created_at: string;
+  venue: string;
+  defense_type: string;
+  status: string;
+  role: string;
+  panel_chair?: string;
+  secretary?: string;
+  assigned_panelists?: { id: string; name: string }[];
+}
+
+export const mockBookings: Booking[] = [
+  {
+    id: 1,
+    research_title: 'E-Defense System in the University of Nueva Caceres',
+    members: ['Lea Roncesvalles', 'Janna Mae Asa', 'Andrey Quintela', 'Dalia Mae Miralles'],
+    adviser_name: 'Joenhel Arcilla',
+    department: 'School of Computer and Information Sciences',
+    program: 'BSIT',
+    year_level: '3rd',
+    semester: '2nd Sem',
+    academic_year: '2026-2027',
+    requested_date: '2026-10-24',
+    requested_time: '10:00 AM',
+    created_at: '2026-10-01T08:30:00.000Z',
+    venue: 'JH32',
+    defense_type: 'Review Defense',
+    status: 'approved',
+    role: 'Panel Chair',
+    panel_chair: 'Junar Danila',
+    secretary: 'Isabel Delos Santos',
+    assigned_panelists: [
+      { id: 'p1', name: 'Irvin Villanueva' },
+      { id: 'p2', name: 'Jay Borela' },
+      { id: 'p3', name: 'Danny Boy Casimero' }
+    ]
+  },
+  {
+    id: 2,
+    research_title: 'Blockchain-Based Voting System',
+    members: ['Alice Brown', 'Charlie Davis'],
+    adviser_name: 'Dr. Roberto Cruz',
+    department: 'School of Computer and Information Sciences',
+    program: 'BSCS',
+    year_level: '4th',
+    semester: '1st Sem',
+    academic_year: '2026-2027',
+    requested_date: '2026-10-22',
+    requested_time: '2:00 PM',
+    created_at: '2026-10-01T14:20:00.000Z',
+    venue: 'https://meet.google.com/abc-defg-hij',
+    defense_type: 'Review Defense',
+    status: 'approved',
+    role: 'Chairman',
+    assigned_panelists: [{ id: '23-181818', name: 'Dr. Maria Santos' }]
+  },
+  {
+    id: 3,
+    research_title: 'Sustainable Urban Planning Framework',
+    members: ['David Wilson', 'Emma Taylor', 'Frank Moore'],
+    adviser_name: 'Dr. Grace Hopper',
+    department: 'College of Engineering and Architecture',
+    program: 'BS Architecture',
+    year_level: '5th',
+    semester: '1st Sem',
+    academic_year: '2026-2027',
+    requested_date: '2026-10-25',
+    requested_time: '9:00 AM',
+    created_at: '2026-10-02T09:00:00.000Z',
+    venue: 'Room 405, CEA Building',
+    defense_type: 'Final Defense',
+    status: 'pending',
+    role: 'Member',
+    assigned_panelists: [{ id: '23-181818', name: 'Dr. Maria Santos' }]
+  },
+  {
+    id: 4,
+    research_title: 'Machine Learning for Medical Diagnosis',
+    members: ['Sarah Johnson', 'Michael Chen', 'Emily Rodriguez'],
+    adviser_name: 'Prof. Ada Lovelace',
+    department: 'School of Computer and Information Sciences',
+    program: 'BS Computer Science',
+    year_level: '4th',
+    semester: '1st Sem',
+    academic_year: '2026-2027',
+    requested_date: '2026-10-18',
+    requested_time: '3:00 PM',
+    created_at: '2026-09-28T15:00:00.000Z',
+    venue: 'Room 303, SCIS Building',
+    defense_type: 'Title Defense',
+    status: 'pending',
+    role: 'Chairman',
+    assigned_panelists: [{ id: '23-181818', name: 'Dr. Maria Santos' }]
+  },
+  {
+    id: 5,
+    research_title: 'Smart City Infrastructure Development',
+    members: ['George Harris', 'Helen Martinez'],
+    adviser_name: 'Dr. Grace Hopper',
+    department: 'College of Engineering and Architecture',
+    program: 'BS Civil Engineering',
+    year_level: '4th',
+    semester: '1st Sem',
+    academic_year: '2026-2027',
+    requested_date: '2026-10-21',
+    requested_time: '11:00 AM',
+    created_at: '2026-09-29T11:00:00.000Z',
+    venue: 'Room 406, CEA Building',
+    defense_type: 'Review Defense',
+    status: 'pending',
+    role: 'Member',
+    assigned_panelists: [{ id: '23-181818', name: 'Dr. Maria Santos' }]
+  }
 ];
 
 export const mockResearchGroups: ResearchGroup[] = [
@@ -116,6 +276,7 @@ export interface PanelistEvaluation {
     criteria: EvaluationCriterion[];
   }[];
   comments: string;
+  approvalDecision?: string;
 }
 
 export const g1Members = mockResearchGroups.find(g => g.id === "1")?.members || [];

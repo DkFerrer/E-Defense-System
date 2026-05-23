@@ -10,9 +10,10 @@ import StatusBadge from './StatusBadge';
 interface ResearchGroupCardProps {
   item: ResearchGroup;
   onViewDetails: (item: ResearchGroup) => void;
+  onEvaluate?: (item: ResearchGroup) => void;
 }
 
-export default function ResearchGroupCard({ item, onViewDetails }: ResearchGroupCardProps) {
+export default function ResearchGroupCard({ item, onViewDetails, onEvaluate }: ResearchGroupCardProps) {
   const { width } = useWindowDimensions();
   const isWide = width >= 600;
 
@@ -27,15 +28,28 @@ export default function ResearchGroupCard({ item, onViewDetails }: ResearchGroup
         <Text style={[styles.title, isWide && { flex: 1 }]} numberOfLines={isWide ? 2 : 3}>
           {item.title}
         </Text>
-        <TouchableOpacity
-          style={styles.viewBtn}
-          onPress={() => onViewDetails(item)}
-          accessibilityRole="button"
-          accessibilityLabel={`View details for ${item.title}`}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.viewBtnText}>View Details</Text>
-        </TouchableOpacity>
+        <View style={styles.topBtns}>
+          {onEvaluate && (
+            <TouchableOpacity
+              style={styles.evaluateBtn}
+              onPress={() => onEvaluate(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`Evaluate ${item.title}`}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.evaluateBtnText}>Evaluate</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.viewBtn}
+            onPress={() => onViewDetails(item)}
+            accessibilityRole="button"
+            accessibilityLabel={`View details for ${item.title}`}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.viewBtnText}>View Details</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Meta grid */}
@@ -89,6 +103,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     marginBottom: 16,
+  },
+  topBtns: {
+    flexDirection: 'row',
+    gap: 8,
+    flexShrink: 0,
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+  },
+  evaluateBtn: {
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  evaluateBtnText: {
+    fontFamily: Typography.fontFamily.semiBold,
+    fontSize: Typography.fontSize.sm,
+    color: '#fff',
   },
   title: {
     fontFamily: Typography.fontFamily.bold,

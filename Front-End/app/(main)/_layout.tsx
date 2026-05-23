@@ -34,6 +34,42 @@ const PAGE_META: Record<string, { title: string; subtitle: string; icon?: string
     icon: 'time-outline',
     color: '#374151',
   },
+  'chairman-evaluation': {
+    title: 'Evaluation Form',
+    subtitle: 'Panel Chairman evaluation form',
+    icon: 'star-outline',
+    color: '#ea580c',
+  },
+  'agreement': {
+    title: 'NDA Agreement',
+    subtitle: 'Read and sign the Non-Disclosure Agreement',
+    icon: 'lock-closed-outline',
+    color: '#ea580c',
+  },
+  'schedule': {
+    title: 'Defense Schedule',
+    subtitle: 'View and manage upcoming research defense schedules',
+    icon: 'calendar-outline',
+    color: '#ea580c',
+  },
+  'rubrics': {
+    title: 'Evaluation Rubrics',
+    subtitle: 'Browse institutional rubrics and grading criteria',
+    icon: 'list-outline',
+    color: '#ea580c',
+  },
+  'results': {
+    title: 'Defense Scorecard',
+    subtitle: 'Review detailed final defense scores and feedback',
+    icon: 'analytics-outline',
+    color: '#ea580c',
+  },
+  'profile': {
+    title: 'Panel Chairman Profile',
+    subtitle: 'Manage your profile and credentials',
+    icon: 'person-outline',
+    color: '#ea580c',
+  },
 };
 
 function getPageMeta(pathname: string) {

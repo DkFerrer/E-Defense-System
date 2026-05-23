@@ -4,6 +4,7 @@ export type UserRole =
   | 'Research Coordinator'
   | 'Dean'
   | 'Panelist'
+  | 'Panel Chairman'
   | 'Adviser'
   | 'Student'
   | null;
@@ -38,6 +39,7 @@ const roleDisplay: Record<string, { name: string; title: string }> = {
   'Research Coordinator': { name: 'Admin User', title: 'Research Coordinator' },
   'Dean': { name: 'Andrey Santos Quintela', title: 'Dean' },
   'Panelist': { name: 'Dr. Maria Santos', title: 'Panelist' },
+  'Panel Chairman': { name: 'Dr. Alexander Chair', title: 'Panel Chairman' },
   'Adviser': { name: 'Prof. Reyes', title: 'Adviser' },
   'Student': { name: 'Juan Dela Cruz', title: 'Student' },
 };

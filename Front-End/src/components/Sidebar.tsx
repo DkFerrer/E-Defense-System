@@ -10,15 +10,17 @@ import { useRouter, usePathname } from 'expo-router';
 import { Colors } from '../theme/colors';
 import { Typography } from '../theme/typography';
 
+import { useAuth } from '../context/AuthContext';
+
 interface NavItem {
   label: string;
-  icon: string;
-  iconActive: string;
+  icon: any;
+  iconActive: any;
   route: string;
   accessibilityLabel: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
+const DEFAULT_NAV_ITEMS: NavItem[] = [
   {
     label: 'Research Groups',
     icon: 'home-outline',
@@ -42,6 +44,44 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+const CHAIRMAN_NAV_ITEMS: NavItem[] = [
+  {
+    label: 'Schedule',
+    icon: 'calendar-outline',
+    iconActive: 'calendar',
+    route: '/(main)/schedule',
+    accessibilityLabel: 'Navigate to Schedule',
+  },
+  {
+    label: 'Evaluation',
+    icon: 'clipboard-outline',
+    iconActive: 'clipboard',
+    route: '/(main)/research-groups',
+    accessibilityLabel: 'Navigate to Research Groups Evaluation',
+  },
+  {
+    label: 'Rubrics',
+    icon: 'book-outline',
+    iconActive: 'book',
+    route: '/(main)/rubrics',
+    accessibilityLabel: 'Navigate to Rubrics',
+  },
+  {
+    label: 'Results',
+    icon: 'analytics-outline',
+    iconActive: 'analytics',
+    route: '/(main)/results',
+    accessibilityLabel: 'Navigate to Results',
+  },
+  {
+    label: 'Profile',
+    icon: 'person-outline',
+    iconActive: 'person',
+    route: '/(main)/profile',
+    accessibilityLabel: 'Navigate to Profile',
+  },
+];
+
 interface SidebarProps {
   /** When false, renders as a slide-over modal drawer */
   isDrawer?: boolean;
@@ -52,6 +92,10 @@ interface SidebarProps {
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const isChairman = user?.role === 'Panel Chairman';
+  const navItems = isChairman ? CHAIRMAN_NAV_ITEMS : DEFAULT_NAV_ITEMS;
 
   const navigate = (route: string) => {
     router.push(route as any);
@@ -87,7 +131,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       {/* Nav items */}
       <View style={styles.nav}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.route || pathname.startsWith(item.route);
           return (
             <TouchableOpacity

@@ -12,7 +12,7 @@ import { useAuth } from '../src/context/AuthContext';
 import { Colors } from '../src/theme/colors';
 import { Typography } from '../src/theme/typography';
 
-const ROLES = ['Research Coordinator', 'Dean', 'Panelist', 'Adviser', 'Student'];
+const ROLES = ['Research Coordinator', 'Dean', 'Panelist', 'Panel Chairman', 'Adviser', 'Student'];
 const SYSTEMS = ['Scheduling System', 'Post Evaluation System'];
 
 const VALID_USERS: Record<string, { username: string; password: string }[]> = {
@@ -27,6 +27,10 @@ const VALID_USERS: Record<string, { username: string; password: string }[]> = {
   Panelist: [
     { username: 'panelist1', password: 'panel123' },
     { username: 'dr.santos', password: 'santos2024' },
+  ],
+  'Panel Chairman': [
+    { username: 'chairman1', password: 'chair123' },
+    { username: 'dr.chair', password: 'chair2024' },
   ],
   Adviser: [
     { username: 'adviser1', password: 'adv123' },
@@ -111,7 +115,11 @@ export default function LoginPage() {
 
   const handleLogin = (role: string, system?: string) => {
     login(role, system);
-    router.replace('/(main)/research-groups');
+    if (role === 'Panel Chairman') {
+      router.replace('/(main)/schedule');
+    } else {
+      router.replace('/(main)/research-groups');
+    }
   };
 
   const handleSubmit = () => {

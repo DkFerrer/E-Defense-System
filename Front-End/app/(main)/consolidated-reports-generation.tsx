@@ -54,12 +54,28 @@ export default function ConsolidatedReportsGenerationScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
     const { width } = useWindowDimensions();
-    const { addReport, logActivity } = useAppData();
+    const { addReport, logActivity, getEvaluationForGroup } = useAppData();
     const [modalState, setModalState] = useState<'hidden' | 'success' | 'error'>('hidden');
     const [apiWarning, setApiWarning] = useState<string | null>(null);
 
     const group = mockResearchGroups.find((g) => g.id === id);
-    const evaluations = id ? (mockPanelistEvaluations[id] ?? []) : [];
+    const mockEvals = id ? (mockPanelistEvaluations[id] ?? []) : [];
+
+    // If the Panel Chairman submitted an evaluation this session, merge it in
+    const liveChairEval = id ? getEvaluationForGroup(id) : undefined;
+    const evaluations = liveChairEval
+        ? [
+              // Live chairman entry (replaces the first mock placeholder)
+              {
+                  panelist:   liveChairEval.panelist,
+                  totalScore: liveChairEval.totalScore,
+                  comments:   liveChairEval.comments,
+                  approvalDecision: liveChairEval.approvalDecision,
+              },
+              // Keep the remaining mock panelist rows
+              ...mockEvals.slice(1),
+          ]
+        : mockEvals;
 
     const totalFinalGrade =
         evaluations.length > 0
@@ -70,6 +86,23 @@ export default function ConsolidatedReportsGenerationScreen() {
 
     const chairEval = evaluations[0] ?? null;
     const dateFinalized = getTodayFormatted();
+
+    const getVerdictLabel = (decision?: string) => {
+        if (decision === 'approved-no-revisions') return 'Approved — No revisions required';
+        if (decision === 'approved-minor-revisions') return 'Approved — Minor revisions required';
+        if (decision === 'approved-major-revisions') return 'Approved — Major revisions required';
+        if (decision === 'disapproved-redefense') return 'Disapproved — For Redefense';
+        return 'Pending Verdict';
+    };
+
+    const hasLiveDecision = !!liveChairEval?.approvalDecision;
+    const chairApproved = (hasLiveDecision && liveChairEval?.approvalDecision)
+        ? !liveChairEval.approvalDecision.includes('disapproved')
+        : totalFinalGrade >= 75;
+
+    const chairVerdict = (hasLiveDecision && liveChairEval?.approvalDecision)
+        ? getVerdictLabel(liveChairEval.approvalDecision)
+        : (totalFinalGrade >= 75 ? 'Approved — Revisions Required' : 'Disapproved — For Redefense');
 
     const handleGenerateReport = async () => {
         try {
@@ -88,8 +121,8 @@ export default function ConsolidatedReportsGenerationScreen() {
                 totalFinalGrade,
                 gradeLabel:      getGradeLabel(totalFinalGrade),
                 chairName:       chairEval?.panelist ?? 'N/A',
-                chairVerdict:    chairEval?.comments ?? '',
-                chairApproved:   (chairEval?.totalScore ?? 0) >= 75,
+                chairVerdict:    chairVerdict,
+                chairApproved:   chairApproved,
                 dateFinalized,
                 panelists: evaluations.map((ev, idx) => ({
                     name:    ev.panelist,
@@ -114,8 +147,8 @@ export default function ConsolidatedReportsGenerationScreen() {
                 totalFinalGrade,
                 gradeLabel:      getGradeLabel(totalFinalGrade),
                 chairName:       chairEval?.panelist ?? 'N/A',
-                chairVerdict:    chairEval?.comments ?? '',
-                chairApproved:   (chairEval?.totalScore ?? 0) >= 75,
+                chairVerdict:    chairVerdict,
+                chairApproved:   chairApproved,
                 dateFinalized,
                 panelists: evaluations.map((ev, idx) => ({
                     name:    ev.panelist,
