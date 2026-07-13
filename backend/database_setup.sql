@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `role_label` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT 'Panel Member',
   `department` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `position` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `account_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT 'Active',
   `remember_token` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
