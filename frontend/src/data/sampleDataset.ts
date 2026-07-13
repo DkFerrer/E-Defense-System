@@ -197,6 +197,21 @@ export const MOCK_ACCOUNTS = [
       status: 'Active',
     },
   },
+  {
+    username: 'secretary1',
+    password: 'secretary123',
+    user: {
+      id: 'secretary1',
+      name: 'Panel Secretary One',
+      email: 'secretary1@unc.edu.ph',
+      role: 'Secretary',
+      roleLabel: 'Panel Secretary',
+      department: 'School of Computer and Information Sciences',
+      position: 'Secretary',
+      accountType: 'Staff',
+      status: 'Active',
+    },
+  },
 ];
 
 const initialEvaluations = [

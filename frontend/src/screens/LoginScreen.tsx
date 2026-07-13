@@ -45,7 +45,7 @@ export default function LoginScreen() {
   const [showRolePicker, setShowRolePicker] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-  const ROLES = ['Panelist', 'Dean', 'Research Coordinator', 'Adviser', 'Student', 'Admin'];
+  const ROLES = ['Panelist', 'Secretary', 'Dean', 'Research Coordinator', 'Adviser', 'Student', 'Admin'];
 
   const handleSubmit = async () => {
     setError('');
@@ -246,6 +246,19 @@ const RightPanel = ({
                 style={[styles.pickerItem, loginAs === role && styles.pickerItemActive]}
                 onPress={() => {
                   setLoginAs(role);
+                  if (role === 'Secretary') {
+                    setUsername('secretary1');
+                    setPassword('secretary123');
+                  } else if (role === 'Panelist') {
+                    setUsername('23-181818');
+                    setPassword('password123');
+                  } else if (role === 'Dean') {
+                    setUsername('dean.andrey');
+                    setPassword('dean123');
+                  } else if (role === 'Research Coordinator') {
+                    setUsername('coordinator1');
+                    setPassword('coord123');
+                  }
                   setShowRolePicker(false);
                 }}
               >

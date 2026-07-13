@@ -7,6 +7,7 @@ import {
   BarChart3,
   User,
 } from 'lucide-react-native';
+import { useApp } from '../context/AppContext';
 
 const BG = '#212121';
 const ACTIVE_BG = '#505050';
@@ -33,6 +34,16 @@ const LOGO = require('../assets/urc-e-defense-logo.png');
  * }} props
  */
 export default function Sidebar({ active, onNavigate, isMobile = false }) {
+  const { user } = useApp();
+  const isSecretary = user?.role === 'Secretary';
+
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (isSecretary) {
+      return item.id !== 'evaluation' && item.id !== 'rubrics';
+    }
+    return true;
+  });
+
   return (
     <View
       style={[styles.wrap, isMobile ? styles.wrapMobile : styles.wrapDesktop]}
@@ -52,7 +63,7 @@ export default function Sidebar({ active, onNavigate, isMobile = false }) {
         <View style={styles.headerDivider} />
 
         <View style={styles.navBlock}>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.Icon;
             const isActive = active === item.id;
             return (

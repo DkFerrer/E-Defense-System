@@ -63,7 +63,7 @@ export function AppProvider({ children }) {
         setEvaluations(getSampleEvaluations());
         return;
       }
-      const { data } = await api.get('/evaluations');
+      const { data } = await api.get('/evaluations.php');
       const list = Array.isArray(data?.data) ? data.data : data;
       setEvaluations(Array.isArray(list) ? list : []);
     } catch (e) {

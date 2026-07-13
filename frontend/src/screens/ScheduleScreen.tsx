@@ -1,16 +1,125 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Platform, Dimensions, ActivityIndicator } from 'react-native';
-import { Mail, Calendar as CalendarIcon, X, CheckCircle, Clock, MapPin, XCircle, Users, Check, AlertCircle } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Platform, Dimensions, ActivityIndicator, TextInput } from 'react-native';
+import { Mail, Calendar as CalendarIcon, X, CheckCircle, Clock, MapPin, XCircle, Users, Check, AlertCircle, ClipboardCheck, FileText, Save } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getBookings } from '../services/api';
+import { getBookings, getDefenseMinutes, saveDefenseMinutes } from '../services/api';
+import { useApp } from '../context/AppContext';
 
 const { width } = Dimensions.get('window');
 
 export default function ScheduleScreen({ onNavigate }) {
+  const { user } = useApp();
+  const isSecretary = user?.role === 'Secretary';
+
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('invitations');
   const [selectedEvent, setSelectedEvent] = useState(null);
+
+  // Secretary Transcribing State
+  const [transcribingEvent, setTranscribingEvent] = useState(null);
+  const [minutesStage, setMinutesStage] = useState('');
+  const [minutesDateTime, setMinutesDateTime] = useState('');
+  const [minutesTitle, setMinutesTitle] = useState('');
+  const [minutesResearchers, setMinutesResearchers] = useState('');
+  const [minutesAdviser, setMinutesAdviser] = useState('');
+  const [minutesSecretary, setMinutesSecretary] = useState('');
+  const [minutesSuggestions, setMinutesSuggestions] = useState('');
+  const [minutesCompliance, setMinutesCompliance] = useState('');
+  const [savingMinutes, setSavingMinutes] = useState(false);
+  const [successMinutes, setSuccessMinutes] = useState(false);
+  const [confirmMinutesAction, setConfirmMinutesAction] = useState(null); // 'draft' | 'submitted' | null
+  const [minutesStatuses, setMinutesStatuses] = useState({});
+
+  const handleOpenMinutes = async (event) => {
+    setTranscribingEvent(event);
+    setMinutesStage(event.defenseType || '');
+    setMinutesDateTime(event.date && event.time ? `${event.date} at ${event.time}` : '');
+    setMinutesTitle(event.title || '');
+    setMinutesResearchers(event.students || '');
+    setMinutesAdviser(event.adviser || '');
+    setMinutesSecretary(user?.name || '');
+    setMinutesSuggestions('');
+    setMinutesCompliance('');
+    setSuccessMinutes(false);
+    
+    try {
+      const existing = await getDefenseMinutes(event.id);
+      if (existing) {
+        setMinutesStage(existing.stage || event.defenseType);
+        setMinutesDateTime(existing.date_time || `${event.date} at ${event.time}`);
+        setMinutesTitle(existing.title || event.title);
+        setMinutesResearchers(existing.researchers || event.students);
+        setMinutesAdviser(existing.adviser || event.adviser);
+        setMinutesSecretary(existing.secretary_name || user?.name || '');
+        setMinutesSuggestions(existing.suggestions || '');
+        setMinutesCompliance(existing.compliance || '');
+      }
+    } catch (e) {
+      console.error('Failed to fetch existing minutes:', e);
+    }
+  };
+
+
+  const requestSubmitMinutes = (status) => {
+    if (status === 'submitted' && !minutesSuggestions.trim()) {
+      alert('Please fill in the Suggestions field before submitting.');
+      return;
+    }
+    setConfirmMinutesAction(status);
+  };
+
+  const handleSubmitMinutes = async (status) => {
+    setSavingMinutes(true);
+    setConfirmMinutesAction(null);
+    try {
+      const isReviewOrFinal = minutesStage.toLowerCase().includes('review') || minutesStage.toLowerCase().includes('final');
+      const payload = {
+        booking_id: transcribingEvent.id,
+        stage: minutesStage,
+        date_time: minutesDateTime,
+        title: minutesTitle,
+        researchers: minutesResearchers,
+        adviser: minutesAdviser,
+        secretary_name: minutesSecretary,
+        suggestions: minutesSuggestions,
+        compliance: isReviewOrFinal ? minutesCompliance : null,
+        status: status
+      };
+      
+      await saveDefenseMinutes(payload);
+      setSuccessMinutes(true);
+      setTimeout(() => {
+        setTranscribingEvent(null);
+        loadInvitations(); // Reload the dashboard data list
+      }, 1500);
+    } catch (e) {
+      alert('Failed to save minutes. Please try again.');
+    } finally {
+      setSavingMinutes(false);
+    }
+  };
+
+
+  const renderMinutesBadge = (bookingId) => {
+    const status = minutesStatuses[bookingId];
+    if (!status) return null;
+    
+    const isSubmitted = status === 'submitted';
+    return (
+      <View style={[
+        styles.minutesBadge, 
+        isSubmitted ? styles.minutesBadgeSubmitted : styles.minutesBadgeDraft
+      ]}>
+        <Text style={[
+          styles.minutesBadgeText, 
+          isSubmitted ? styles.minutesBadgeSubmittedText : styles.minutesBadgeDraftText
+        ]}>
+          {isSubmitted ? 'Submitted' : 'Draft Saved'}
+        </Text>
+      </View>
+    );
+  };
 
   useEffect(() => {
     loadInvitations();
@@ -20,6 +129,21 @@ export default function ScheduleScreen({ onNavigate }) {
     setLoading(true);
     try {
       const data = await getBookings();
+      
+      // Load minutes statuses
+      let statuses = {};
+      try {
+        const minutesList = await getDefenseMinutes(null);
+        if (Array.isArray(minutesList)) {
+          minutesList.forEach(m => {
+            statuses[m.booking_id] = m.status;
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load minutes statuses:', e);
+      }
+      setMinutesStatuses(statuses);
+
       const mapped = [];
       for (const b of data) {
         const isAccepted = await AsyncStorage.getItem(`accepted_${b.id}`);
@@ -101,11 +225,7 @@ export default function ScheduleScreen({ onNavigate }) {
       await AsyncStorage.removeItem(`declined_${eventId}`);
       setInvitations(prev => prev.map(inv => inv.id === eventId ? { ...inv, status: 'accepted' } : inv));
       setConfirmModal({ visible: false, action: null, eventId: null });
-      if (onNavigate) {
-        setTimeout(() => {
-          onNavigate('evaluation');
-        }, 300);
-      }
+      setActiveTab('calendar');
     } else if (action === 'decline') {
       await AsyncStorage.setItem(`declined_${eventId}`, 'true');
       await AsyncStorage.removeItem(`accepted_${eventId}`);
@@ -240,7 +360,10 @@ export default function ScheduleScreen({ onNavigate }) {
                 {pendingInvs.map(inv => (
                   <View key={inv.id} style={styles.card}>
                     <View style={styles.cardHeader}>
-                      <Text style={styles.cardTitle}>{inv.title}</Text>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                        <Text style={styles.cardTitle}>{inv.title}</Text>
+                        {renderMinutesBadge(inv.id)}
+                      </View>
                       <View style={styles.tag}><Text style={styles.tagText}>New Request</Text></View>
                     </View>
                     
@@ -299,8 +422,33 @@ export default function ScheduleScreen({ onNavigate }) {
                       </View>
                       <View style={styles.calEventInfo}>
                         <Text style={styles.calEventTime}>{inv.time}</Text>
-                        <Text style={styles.calEventTitle}>{inv.title}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                          <Text style={styles.calEventTitle}>{inv.title}</Text>
+                          {renderMinutesBadge(inv.id)}
+                        </View>
                         <Text style={styles.calEventRoom}><MapPin size={12} color="#64748b" style={{ marginRight: 4 }}/> {inv.room}</Text>
+                        {isSecretary && (
+                          <Pressable 
+                            style={{ 
+                              marginTop: 8, 
+                              backgroundColor: '#2563eb', 
+                              paddingHorizontal: 12, 
+                              paddingVertical: 6, 
+                              borderRadius: 6, 
+                              alignSelf: 'flex-start',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6
+                            }} 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleOpenMinutes(inv);
+                            }}
+                          >
+                            <ClipboardCheck size={14} color="#ffffff" />
+                            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>Transcribe Minutes</Text>
+                          </Pressable>
+                        )}
                       </View>
                     </Pressable>
                   ))}
@@ -352,7 +500,10 @@ export default function ScheduleScreen({ onNavigate }) {
             </View>
             {selectedEvent && (
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                <Text style={styles.modalProjectTitle}>{selectedEvent.title}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  <Text style={[styles.modalProjectTitle, { marginBottom: 0, flex: 1 }]}>{selectedEvent.title}</Text>
+                  {renderMinutesBadge(selectedEvent.id)}
+                </View>
                 
                 <View style={styles.modalDetailGroup}>
                   <Text style={styles.modalDetailLabel}>Proponents</Text>
@@ -405,6 +556,18 @@ export default function ScheduleScreen({ onNavigate }) {
                 </View>
               </ScrollView>
             )}
+            {isSecretary && selectedEvent && (
+              <Pressable 
+                style={[styles.modalCloseBtn, { backgroundColor: '#10b981', marginBottom: 12 }]} 
+                onPress={() => {
+                  const event = selectedEvent;
+                  setSelectedEvent(null);
+                  handleOpenMinutes(event);
+                }}
+              >
+                <Text style={styles.modalCloseBtnText}>Thesis Defense Minutes</Text>
+              </Pressable>
+            )}
             <Pressable style={styles.modalCloseBtn} onPress={() => setSelectedEvent(null)}>
               <Text style={styles.modalCloseBtnText}>Done</Text>
             </Pressable>
@@ -434,6 +597,169 @@ export default function ScheduleScreen({ onNavigate }) {
                 onPress={executeConfirmAction}
               >
                 <Text style={styles.confirmModalConfirmText}>Yes, {confirmModal.action === 'accept' ? 'Accept' : 'Decline'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Thesis Defense Minutes Modal */}
+      <Modal visible={!!transcribingEvent} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxWidth: 650, width: '95%' }]}>
+            {successMinutes ? (
+              <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }}>
+                <CheckCircle size={64} color="#10b981" />
+                <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a', marginTop: 20 }}>Minutes Saved Successfully!</Text>
+                <Text style={{ fontSize: 15, color: '#64748b', marginTop: 8, textAlign: 'center' }}>
+                  The transcription for "{minutesTitle}" has been saved.
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <View style={[styles.modalHeader, { marginBottom: 12 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <FileText size={24} color="#2563eb" />
+                    <Text style={[styles.modalTitle, { fontSize: 20 }]}>Thesis Defense Minutes</Text>
+                  </View>
+                  <Pressable onPress={() => setTranscribingEvent(null)}>
+                    <X size={24} color="#64748b" />
+                  </Pressable>
+                </View>
+
+                <Text style={{ fontSize: 13, color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: 16 }}>
+                  Summary of Comments and Suggestions
+                </Text>
+
+                <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={true}>
+                  <View style={{ gap: 12, marginBottom: 16 }}>
+                    {/* Row 1: Stage of Defense & Date and Time */}
+                    <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                      <View style={{ flex: 1, minWidth: 200, backgroundColor: '#f1f5f9', padding: 12, borderRadius: 8 }}>
+                        <Text style={styles.formLabel}>Stage of Defense</Text>
+                        <Text style={{ fontSize: 15, color: '#334155', fontWeight: '600' }}>{minutesStage}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 200, backgroundColor: '#f1f5f9', padding: 12, borderRadius: 8 }}>
+                        <Text style={styles.formLabel}>Date and Time of Defense</Text>
+                        <Text style={{ fontSize: 15, color: '#334155', fontWeight: '600' }}>{minutesDateTime}</Text>
+                      </View>
+                    </View>
+
+                    {/* Row 2: Research Title */}
+                    <View style={{ backgroundColor: '#f1f5f9', padding: 12, borderRadius: 8 }}>
+                      <Text style={styles.formLabel}>Research Title</Text>
+                      <Text style={{ fontSize: 15, color: '#0f172a', fontWeight: '700' }}>{minutesTitle}</Text>
+                    </View>
+
+                    {/* Row 3: Researchers & Adviser */}
+                    <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                      <View style={{ flex: 1, minWidth: 200, backgroundColor: '#f1f5f9', padding: 12, borderRadius: 8 }}>
+                        <Text style={styles.formLabel}>Researchers</Text>
+                        <Text style={{ fontSize: 15, color: '#334155', fontWeight: '600' }}>{minutesResearchers}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 200, backgroundColor: '#f1f5f9', padding: 12, borderRadius: 8 }}>
+                        <Text style={styles.formLabel}>Adviser</Text>
+                        <Text style={{ fontSize: 15, color: '#334155', fontWeight: '600' }}>{minutesAdviser}</Text>
+                      </View>
+                    </View>
+
+                    {/* Row 4: Panel Secretary */}
+                    <View style={{ backgroundColor: '#f1f5f9', padding: 12, borderRadius: 8 }}>
+                      <Text style={styles.formLabel}>Panel Secretary</Text>
+                      <Text style={{ fontSize: 15, color: '#334155', fontWeight: '600' }}>{minutesSecretary}</Text>
+                    </View>
+
+                    {/* Divider */}
+                    <View style={{ height: 1, backgroundColor: '#e2e8f0', marginVertical: 8 }} />
+
+                    {/* Row 5: Suggestions */}
+                    <View>
+                      <Text style={[styles.formLabel, { color: '#0f172a', fontWeight: '800' }]}>Suggestions</Text>
+                      <TextInput 
+                        style={[styles.formTextArea, { minHeight: 80 }]} 
+                        value={minutesSuggestions} 
+                        onChangeText={setMinutesSuggestions} 
+                        placeholder="Type comments, suggestions, and corrections here..."
+                        multiline
+                        textAlignVertical="top"
+                      />
+                    </View>
+ 
+                    {/* Row 6: Compliance (for Review Defense and Final Defense only!) */}
+                    {(minutesStage.toLowerCase().includes('review') || minutesStage.toLowerCase().includes('final')) && (
+                      <View>
+                        <Text style={[styles.formLabel, { color: '#0f172a', fontWeight: '800' }]}>Compliance Requirements</Text>
+                        <TextInput 
+                          style={[styles.formTextArea, { minHeight: 80 }]} 
+                          value={minutesCompliance} 
+                          onChangeText={setMinutesCompliance} 
+                          placeholder="Type compliance guidelines or conditions here..."
+                          multiline
+                          textAlignVertical="top"
+                        />
+                      </View>
+                    )}
+                  </View>
+                </ScrollView>
+
+                {/* Footer Buttons */}
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+                  <Pressable 
+                    style={[styles.btn, { backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#cbd5e1' }]} 
+                    onPress={() => setTranscribingEvent(null)}
+                    disabled={savingMinutes}
+                  >
+                    <Text style={{ color: '#475569', fontWeight: '700' }}>Cancel</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.btn, { backgroundColor: '#475569' }, savingMinutes && { opacity: 0.7 }]} 
+                    onPress={() => requestSubmitMinutes('draft')}
+                    disabled={savingMinutes}
+                  >
+                    <Save size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text style={{ color: '#ffffff', fontWeight: '700' }}>Save Draft</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.btn, { backgroundColor: '#2563eb' }, savingMinutes && { opacity: 0.7 }]} 
+                    onPress={() => requestSubmitMinutes('submitted')}
+                    disabled={savingMinutes}
+                  >
+                    <Check size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text style={{ color: '#ffffff', fontWeight: '700' }}>Submit Minutes</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Minutes Confirmation Modal */}
+      <Modal visible={!!confirmMinutesAction} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalBox}>
+            <View style={styles.confirmModalHeader}>
+              <AlertCircle size={28} color={confirmMinutesAction === 'submitted' ? '#2563eb' : '#475569'} />
+              <Text style={styles.confirmModalTitle}>
+                {confirmMinutesAction === 'submitted' ? 'Submit Minutes?' : 'Save as Draft?'}
+              </Text>
+            </View>
+            <Text style={styles.confirmModalMessage}>
+              {confirmMinutesAction === 'submitted' 
+                ? 'Are you sure you want to submit these minutes? This will finalize the defense transcription.' 
+                : 'Are you sure you want to save these minutes as a draft? You can continue transcribing later.'}
+            </Text>
+            <View style={styles.confirmModalActionRow}>
+              <Pressable style={styles.confirmModalCancelBtn} onPress={() => setConfirmMinutesAction(null)}>
+                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.confirmModalConfirmBtn, confirmMinutesAction === 'submitted' ? { backgroundColor: '#2563eb' } : { backgroundColor: '#475569' }]} 
+                onPress={() => handleSubmitMinutes(confirmMinutesAction)}
+              >
+                <Text style={styles.confirmModalConfirmText}>
+                  {confirmMinutesAction === 'submitted' ? 'Yes, Submit' : 'Yes, Save Draft'}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -538,5 +864,66 @@ const styles = StyleSheet.create({
   calGridDayTextToday: { color: '#2563eb', fontWeight: '800' },
   calGridDayTextActive: { color: '#10b981', fontWeight: '800' },
   calGridEventIndicators: { flexDirection: 'row', gap: 2, marginTop: 4 },
-  calGridDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#10b981' }
+  calGridDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#10b981' },
+  formLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
+    fontSize: 14,
+    color: '#1e293b',
+    backgroundColor: '#f8fafc',
+    ...Platform.select({
+      web: { outlineStyle: 'none' as any },
+      default: {},
+    }),
+  },
+  formTextArea: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#1e293b',
+    backgroundColor: '#ffffff',
+    minHeight: 80,
+    ...Platform.select({
+      web: { outlineStyle: 'none' as any },
+      default: {},
+    }),
+  },
+  minutesBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginLeft: 8,
+    alignSelf: 'center',
+  },
+  minutesBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  minutesBadgeDraft: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#fef3c7',
+  },
+  minutesBadgeDraftText: {
+    color: '#d97706',
+  },
+  minutesBadgeSubmitted: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  minutesBadgeSubmittedText: {
+    color: '#16a34a',
+  },
 });

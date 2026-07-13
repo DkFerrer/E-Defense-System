@@ -10,39 +10,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'dbconnection.php';
 
-$userId = 1; // Panelist Dr. Maria Santos
-
-$stmt = $pdo->prepare('
-    SELECT e.*, prs.status as submission_status, prs.scores, prs.comments, prs.general_comments, prs.total_score, prs.submitted_at 
+$stmt = $pdo->query('
+    SELECT e.*, prs.id as submission_id, prs.status as submission_status, prs.scores, prs.comments, prs.general_comments, prs.total_score, prs.submitted_at 
     FROM evaluations e
-    JOIN panelist_rubric_submissions prs ON e.id = prs.evaluation_id
-    WHERE prs.user_id = ? AND prs.status = "submitted"
+    LEFT JOIN panelist_rubric_submissions prs ON e.id = prs.evaluation_id AND prs.status = "submitted"
     ORDER BY e.due_date DESC
 ');
-$stmt->execute([$userId]);
 $resultsRaw = $stmt->fetchAll();
 
-$results = [];
+$evaluationsMap = [];
 foreach ($resultsRaw as $row) {
-    $results[] = [
-        'id' => 'eval-' . $row['id'],
-        'target' => $row['target'],
-        'authors' => json_decode($row['authors'], true) ?? [],
-        'type' => $row['type'],
-        'defense_stage' => $row['defense_stage'],
-        'result_date' => date('Y-m-d', strtotime($row['submitted_at'] ?? 'now')),
-        'status' => 'completed',
-        'panelist_submissions' => [
-            [
-                'total_score' => $row['total_score'],
-                'scores' => json_decode($row['scores'], true),
-                'comments' => json_decode($row['comments'], true),
-                'general_comments' => $row['general_comments'],
-                'status' => $row['submission_status']
-            ]
-        ]
-    ];
+    $evalId = $row['id'];
+    if (!isset($evaluationsMap[$evalId])) {
+        // Fetch defense minutes for this evaluation's booking
+        $minutes = null;
+        if ($row['booking_id']) {
+            $minStmt = $pdo->prepare('SELECT * FROM defense_minutes WHERE booking_id = ?');
+            $minStmt->execute([$row['booking_id']]);
+            $minRow = $minStmt->fetch();
+            if ($minRow) {
+                $minutes = [
+                    'id' => (int) $minRow['id'],
+                    'booking_id' => (int) $minRow['booking_id'],
+                    'stage' => $minRow['stage'],
+                    'date_time' => $minRow['date_time'],
+                    'title' => $minRow['title'],
+                    'researchers' => $minRow['researchers'],
+                    'adviser' => $minRow['adviser'],
+                    'secretary_name' => $minRow['secretary_name'],
+                    'suggestions' => $minRow['suggestions'],
+                    'compliance' => $minRow['compliance'],
+                    'status' => $minRow['status'],
+                    'created_at' => $minRow['created_at'],
+                    'updated_at' => $minRow['updated_at']
+                ];
+            }
+        }
+
+        $evaluationsMap[$evalId] = [
+            'id' => (int) $row['id'],
+            'booking_id' => $row['booking_id'] ? (int) $row['booking_id'] : null,
+            'target' => $row['target'],
+            'type' => $row['type'],
+            'defense_stage' => $row['defense_stage'],
+            'authors' => json_decode($row['authors'], true) ?? [],
+            'department' => $row['department'],
+            'max_score' => (int) $row['max_score'],
+            'result_date' => date('Y-m-d', strtotime($row['result_date'] ?? $row['created_at'] ?? 'now')),
+            'status' => $row['status'],
+            'created_at' => $row['created_at'],
+            'panelist_submissions' => [],
+            'defense_minutes' => $minutes
+        ];
+    }
+
+    if ($row['submission_id']) {
+        $evaluationsMap[$evalId]['panelist_submissions'][] = [
+            'total_score' => $row['total_score'],
+            'scores' => json_decode($row['scores'], true),
+            'comments' => json_decode($row['comments'], true),
+            'general_comments' => $row['general_comments'],
+            'status' => $row['submission_status']
+        ];
+    }
 }
+
+$results = array_values($evaluationsMap);
 
 echo json_encode($results);
 ?>

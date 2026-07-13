@@ -32,11 +32,11 @@ const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { user, logout } = useApp();
-  
+
   const [avatarUri, setAvatarUri] = React.useState(null);
   const [showPasswordModal, setShowPasswordModal] = React.useState(false);
   const [showForgotModal, setShowForgotModal] = React.useState(false);
-  
+
   const [currentPass, setCurrentPass] = React.useState('');
   const [newPass, setNewPass] = React.useState('');
   const [confirmPass, setConfirmPass] = React.useState('');
@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         </View>
         <Text style={styles.userName}>{user?.name}</Text>
         <Text style={styles.userRole}>{user?.roleLabel || 'Panel Member'}</Text>
-        
+
         <View style={styles.tagRow}>
           <View style={styles.tag}><Text style={styles.tagText}>{user?.department || 'SCIS'}</Text></View>
           <View style={styles.tag}><Text style={styles.tagText}>{user?.position || 'Faculty'}</Text></View>
@@ -121,15 +121,15 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Settings & Privacy</Text>
         <View style={styles.actionList}>
-          <ActionItem 
-            icon={<Shield size={18} color="#4b5563" />} 
-            label="Change Password" 
-            onPress={() => setShowPasswordModal(true)} 
+          <ActionItem
+            icon={<Shield size={18} color="#4b5563" />}
+            label="Change Password"
+            onPress={() => setShowPasswordModal(true)}
           />
-          <ActionItem 
-            icon={<Mail size={18} color="#4b5563" />} 
-            label="Forgot Password" 
-            onPress={() => setShowForgotModal(true)} 
+          <ActionItem
+            icon={<Mail size={18} color="#4b5563" />}
+            label="Forgot Password"
+            onPress={() => setShowForgotModal(true)}
           />
           <Pressable style={styles.logoutBtn} onPress={logout}>
             <LogOut size={18} color="#ef4444" />
@@ -143,7 +143,7 @@ export default function ProfileScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowPasswordModal(false)}>
           <View style={styles.modalBox} onStartShouldSetResponder={() => true}>
             <Text style={styles.modalTitle}>Change Password</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Current Password</Text>
               <TextInput style={styles.textInput} secureTextEntry value={currentPass} onChangeText={setCurrentPass} placeholder="••••••••" />
@@ -173,7 +173,7 @@ export default function ProfileScreen() {
           <View style={styles.modalBox} onStartShouldSetResponder={() => true}>
             <Text style={styles.modalTitle}>Forgot Password</Text>
             <Text style={styles.modalSub}>Enter your email address to receive a password reset link.</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <TextInput style={styles.textInput} keyboardType="email-address" autoCapitalize="none" value={forgotEmail} onChangeText={setForgotEmail} placeholder="your@email.com" />
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   avatarContainer: { position: 'relative', marginBottom: 16 },
   avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#ffffff', fontSize: 36, fontWeight: '900' },
-  onlineBadge: { position: 'absolute', right: 4, bottom: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: '#16a34a', borderLineWidth: 3, borderColor: '#ffffff' },
+  onlineBadge: { position: 'absolute', right: 4, bottom: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: '#16a34a', borderWidth: 3, borderColor: '#ffffff' },
   userName: { fontSize: 22, fontWeight: '900', color: '#111827' },
   userRole: { fontSize: 14, color: '#6b7280', fontWeight: '600', marginTop: 4 },
   tagRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   actionLabel: { fontSize: 15, fontWeight: '700', color: '#111827' },
   logoutBtn: { flexDirection: 'row', padding: 16, alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6', marginTop: 8 },
   logoutText: { fontSize: 15, fontWeight: '800', color: '#ef4444' },
-  
+
   // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalBox: { width: '100%', maxWidth: 400, backgroundColor: '#ffffff', borderRadius: 24, padding: 32 },

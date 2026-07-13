@@ -85,6 +85,41 @@ const getLevelBadgeStyle = (level) => {
   return stylesMap[level] || { bg: '#f1f5f9', border: '#e2e8f0', text: '#475569' };
 };
 
+const renderFormattedText = (text) => {
+  if (!text) return <Text style={{ color: '#64748b' }}>N/A</Text>;
+  
+  const lines = text.split('\n');
+  return lines.map((line, lineIdx) => {
+    let isBullet = false;
+    let cleanLine = line;
+    if (line.trim().startsWith('- ')) {
+      isBullet = true;
+      cleanLine = line.trim().substring(2);
+    }
+    
+    const regex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>)/g;
+    const parts = cleanLine.split(regex);
+    
+    const elements = parts.map((part, partIdx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <Text key={partIdx} style={{ fontWeight: 'bold' }}>{part.slice(2, -2)}</Text>;
+      } else if (part.startsWith('*') && part.endsWith('*')) {
+        return <Text key={partIdx} style={{ fontStyle: 'italic' }}>{part.slice(1, -1)}</Text>;
+      } else if (part.startsWith('<u>') && part.endsWith('</u>')) {
+        return <Text key={partIdx} style={{ textDecorationLine: 'underline' }}>{part.slice(3, -4)}</Text>;
+      }
+      return <Text key={partIdx}>{part}</Text>;
+    });
+
+    return (
+      <View key={lineIdx} style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4, alignItems: 'flex-start' }}>
+        {isBullet && <Text style={{ marginRight: 6, fontSize: 13, color: '#334155' }}>•</Text>}
+        <Text style={{ flex: 1, fontSize: 13, color: '#334155', lineHeight: 18 }}>{elements}</Text>
+      </View>
+    );
+  });
+};
+
 export default function ResultsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -128,7 +163,8 @@ export default function ResultsScreen() {
           stage: ev.type,
           status: avgScore >= 75 ? 'Passed' : (submissions.length > 0 ? 'Conditional' : 'Pending'),
           status_tone: avgScore >= 75 ? 'green' : (submissions.length > 0 ? 'orange' : 'teal'),
-          submissions: submissions
+          submissions: submissions,
+          defense_minutes: ev.defense_minutes
         };
       });
       
@@ -247,8 +283,26 @@ export default function ResultsScreen() {
                   <View style={styles.metaItem}><FileText size={14} color="#6b7280" /><Text style={styles.metaText}>{row.stage}</Text></View>
                 </View>
                 
-                <View style={[styles.statusBadge, { backgroundColor: status.bg, borderColor: status.border }]}>
-                  <Text style={[styles.statusText, { color: status.text }]}>{row.status}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={[styles.statusBadge, { backgroundColor: status.bg, borderColor: status.border, marginRight: 8 }]}>
+                    <Text style={[styles.statusText, { color: status.text }]}>{row.status}</Text>
+                  </View>
+                  {row.defense_minutes ? (
+                    <View style={[styles.statusBadge, { 
+                      backgroundColor: row.defense_minutes.status === 'submitted' ? '#eff6ff' : '#fffbeb',
+                      borderColor: row.defense_minutes.status === 'submitted' ? '#bfdbfe' : '#fef3c7',
+                    }]}>
+                      <Text style={[styles.statusText, { 
+                        color: row.defense_minutes.status === 'submitted' ? '#2563eb' : '#d97706' 
+                      }]}>
+                        Minutes: {row.defense_minutes.status === 'submitted' ? 'Submitted' : 'Draft'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.statusBadge, { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
+                      <Text style={[styles.statusText, { color: '#dc2626' }]}>Minutes: Missing</Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -357,6 +411,57 @@ export default function ResultsScreen() {
                     </View>
                   </View>
 
+                  {selectedResult.defense_minutes ? (
+                    <View style={styles.reportSection}>
+                      <Text style={styles.reportSectionTitle}>Defense Minutes (Secretary Transcription)</Text>
+                      <View style={[styles.panelistCard, { borderColor: '#2563eb', borderLeftWidth: 4 }]}>
+                        <View style={[styles.panelistCardHeader, { backgroundColor: '#2563eb' }]}>
+                          <FileText size={20} color="#fff" />
+                          <Text style={styles.panelistCardTitle}>
+                            Thesis Defense Minutes (Transcribed by Secretary)
+                          </Text>
+                          <View style={[styles.panelistScoreBadge, { backgroundColor: selectedResult.defense_minutes.status === 'submitted' ? '#10b981' : '#f59e0b' }]}>
+                            <Text style={styles.panelistScoreBadgeText}>
+                              {selectedResult.defense_minutes.status === 'submitted' ? 'Submitted' : 'Draft'}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.panelistCardBody}>
+                          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                            <View style={{ flex: 1, minWidth: 150 }}>
+                              <Text style={styles.formLabel}>Panel Secretary</Text>
+                              <Text style={{ fontSize: 14, color: '#334155', fontWeight: '600' }}>
+                                {selectedResult.defense_minutes.secretary_name || 'N/A'}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 150 }}>
+                              <Text style={styles.formLabel}>Date and Time</Text>
+                              <Text style={{ fontSize: 14, color: '#334155', fontWeight: '600' }}>
+                                {selectedResult.defense_minutes.date_time || 'N/A'}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ marginBottom: 12 }}>
+                            <Text style={[styles.formLabel, { color: '#1e293b', fontWeight: '800' }]}>Suggestions</Text>
+                            <View style={{ backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', minHeight: 40 }}>
+                              {renderFormattedText(selectedResult.defense_minutes.suggestions)}
+                            </View>
+                          </View>
+
+                          {selectedResult.defense_minutes.compliance ? (
+                            <View style={{ marginBottom: 12 }}>
+                              <Text style={[styles.formLabel, { color: '#1e293b', fontWeight: '800' }]}>Compliance Requirements</Text>
+                              <View style={{ backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0', minHeight: 40 }}>
+                                {renderFormattedText(selectedResult.defense_minutes.compliance)}
+                              </View>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+                  ) : null}
+
                   <View style={styles.reportSection}>
                     <Text style={styles.reportSectionTitle}>Detailed Panel Evaluations</Text>
                     {selectedResult.submissions && selectedResult.submissions.length > 0 ? (
@@ -446,7 +551,7 @@ export default function ResultsScreen() {
                                           {subsection.criteria.map((criterion) => {
                                             const score = parsedScores[criterion.id] || 0;
                                             const selectedLevel = getSelectedLevel(score, criterion.points);
-                                            const selectedRubric = criterion.rubric?.find(r => r.level === selectedLevel);
+                                            const selectedRubric = (criterion as any).rubric?.find(r => r.level === selectedLevel);
                                             const selectedDesc = selectedRubric ? selectedRubric.description : '';
                                             const critComment = parsedComments[criterion.id];
                                             const badgeTheme = getLevelBadgeStyle(selectedLevel);
@@ -515,7 +620,7 @@ export default function ResultsScreen() {
                                           {presentationCriteria.map((criterion) => {
                                             const score = student.scores?.[criterion.id] || 0;
                                             const selectedLevel = getSelectedLevel(score, criterion.points);
-                                            const selectedRubric = criterion.rubric?.find(r => r.level === selectedLevel);
+                                            const selectedRubric = (criterion as any).rubric?.find(r => r.level === selectedLevel);
                                             const selectedDesc = selectedRubric ? selectedRubric.description : '';
                                             const critComment = sCommentObj.comments?.[criterion.id];
                                             const badgeTheme = getLevelBadgeStyle(selectedLevel);
@@ -984,5 +1089,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 14,
+  },
+  formLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
 });

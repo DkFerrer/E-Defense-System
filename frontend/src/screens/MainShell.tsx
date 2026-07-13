@@ -60,8 +60,8 @@ export default function MainShell() {
 
         <View style={styles.main} accessibilityRole="main">
           {activeNavId === 'schedule' ? <ScheduleScreen onNavigate={onNavigate} /> : null}
-          {activeNavId === 'evaluation' ? <DashboardScreen /> : null}
-          {activeNavId === 'rubrics' ? <RubricsScreen /> : null}
+          {activeNavId === 'evaluation' && user?.role !== 'Secretary' ? <DashboardScreen /> : null}
+          {activeNavId === 'rubrics' && user?.role !== 'Secretary' ? <RubricsScreen /> : null}
           {activeNavId === 'results' ? <ResultsScreen /> : null}
           {activeNavId === 'profile' ? <ProfileScreen /> : null}
         </View>

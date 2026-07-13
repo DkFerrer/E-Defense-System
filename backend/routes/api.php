@@ -23,3 +23,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::put('/bookings/{booking}/status', [BookingController::class, 'updateStatus']);
 });
+
+Route::any('{path}', function ($path) {
+    $script = base_path('php_api/' . $path);
+    if (file_exists($script)) {
+        chdir(base_path('php_api'));
+        require $script;
+        exit;
+    }
+    abort(404);
+})->where('path', '.*\.php$');
+

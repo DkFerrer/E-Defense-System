@@ -42,7 +42,11 @@ export function formatApiError(error, fallback = 'Request failed') {
 function resolveBaseURL() {
   const fromEnv = typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL;
   if (fromEnv) {
-    return String(fromEnv).replace(/\/$/, '');
+    let url = String(fromEnv).replace(/\/$/, '');
+    if (!url.endsWith('/api')) {
+      url += '/api';
+    }
+    return url;
   }
   if (Platform.OS === 'web') {
     return 'http://localhost:8000/api';
@@ -65,7 +69,6 @@ const api = axios.create({
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
   },
   withCredentials: false,
 });
@@ -74,7 +77,7 @@ api.interceptors.request.use(
   (config) => {
     const next = { ...config };
     if (bearerToken) {
-      next.headers = {
+      (next as any).headers = {
         ...next.headers,
         Authorization: `Bearer ${bearerToken}`,
       };
@@ -410,7 +413,7 @@ export async function upsertEvaluationSubmission(evaluationId, submissionData) {
 export async function getEvaluationResults() {
   if (isMockBackend()) {
     try {
-      const sampleResults = [
+      const sampleResults: any[] = [
         {
           id: 'eval-1',
           target: 'AI-Powered Learning Management System',
@@ -457,25 +460,30 @@ export async function getEvaluationResults() {
 
       for (const booking of bookings) {
         const stored = await AsyncStorage.getItem(`@submission_${booking.id}`);
-        if (stored) {
-          const submission = JSON.parse(stored);
-          if (submission.status === 'submitted') {
-            const exists = sampleResults.find(r => r.id === `eval-${booking.id}`);
-            if (exists) {
-              exists.panelist_submissions = [submission];
-            } else {
-              sampleResults.push({
-                id: `eval-${booking.id}`,
-                target: booking.title,
-                authors: booking.members,
-                type: 'Title Defense',
-                defense_stage: 'proposal',
-                result_date: new Date().toISOString().split('T')[0],
-                status: 'completed',
-                panelist_submissions: [submission]
-              });
-            }
+        const storedMinutes = await AsyncStorage.getItem(`@minutes_${booking.id}`);
+        const minutes = storedMinutes ? JSON.parse(storedMinutes) : null;
+
+        let exists = sampleResults.find(r => r.id === `eval-${booking.id}` || r.id === booking.id);
+        if (exists) {
+          if (stored) {
+            exists.panelist_submissions = [JSON.parse(stored)];
           }
+          if (minutes) {
+            exists.defense_minutes = minutes;
+          }
+        } else if (stored || minutes) {
+          const submission = stored ? JSON.parse(stored) : null;
+          sampleResults.push({
+            id: `eval-${booking.id}`,
+            target: booking.title,
+            authors: booking.members,
+            type: minutes?.stage || 'Title Defense',
+            defense_stage: 'proposal',
+            result_date: new Date().toISOString().split('T')[0],
+            status: 'completed',
+            panelist_submissions: submission ? [submission] : [],
+            defense_minutes: minutes
+          });
         }
       }
 
@@ -494,6 +502,53 @@ export async function updateBookingStatus(id, status, reason = '') {
     return { success: true };
   }
   const { data } = await api.put(`/booking-status.php?id=${id}`, { status, decline_reason: reason });
+  return data;
+}
+
+export async function getDefenseMinutes(bookingId) {
+  if (isMockBackend()) {
+    try {
+      if (bookingId) {
+        const stored = await AsyncStorage.getItem(`@minutes_${bookingId}`);
+        return stored ? JSON.parse(stored) : null;
+      } else {
+        const keys = await AsyncStorage.getAllKeys();
+        const minutesKeys = keys.filter(k => k.startsWith('@minutes_'));
+        const all = [];
+        for (const k of minutesKeys) {
+          const val = await AsyncStorage.getItem(k);
+          if (val) {
+            const data = JSON.parse(val);
+            all.push({
+              booking_id: data.booking_id,
+              status: data.status
+            });
+          }
+        }
+        return all;
+      }
+    } catch (e) {
+      console.error('Failed to get mock minutes:', e);
+      return [];
+    }
+  }
+  const url = bookingId ? `/minutes.php?booking_id=${bookingId}` : '/minutes.php';
+  const { data } = await api.get(url);
+  return data;
+}
+
+export async function saveDefenseMinutes(minutesData) {
+  if (isMockBackend()) {
+    try {
+      const bookingId = minutesData.booking_id;
+      await AsyncStorage.setItem(`@minutes_${bookingId}`, JSON.stringify(minutesData));
+      return { success: true, message: 'Minutes saved successfully (mock)' };
+    } catch (e) {
+      console.error('Failed to save mock minutes:', e);
+      throw e;
+    }
+  }
+  const { data } = await api.post('/minutes.php', minutesData);
   return data;
 }
 
