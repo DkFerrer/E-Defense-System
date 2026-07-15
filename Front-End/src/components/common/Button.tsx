@@ -37,7 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const isDisabled = disabled || loading;
 
-  const buttonStyles: ViewStyle[] = [
+  const buttonStyles: any[] = [
     styles.base,
     styles[`${variant}Bg`],
     styles[`${size}Size`],
@@ -46,7 +46,7 @@ export const Button: React.FC<ButtonProps> = ({
     style || {},
   ];
 
-  const textStyles: TextStyle[] = [
+  const textStyles: any[] = [
     styles.text,
     styles[`${variant}Text`],
     styles[`${size}Text`],

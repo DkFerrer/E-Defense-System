@@ -12,7 +12,7 @@ export const authApi = {
     const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/register', data);
     return response.data.data;
   },
-
+  
   logout: async (): Promise<void> => {
     await apiClient.post('/auth/logout');
   },

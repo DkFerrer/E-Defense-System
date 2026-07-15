@@ -43,6 +43,12 @@ export const adviserRequestApi = {
     return response.data;
   },
 
+  /** Reset a request status back to pending (undo approve/reject) */
+  resetStatus: async (id: number): Promise<ApiResponse<any>> => {
+    const response = await apiClient.patch(`/adviser-requests/${id}/reset`);
+    return response.data;
+  },
+
   /** Get list of available advisers for the dropdown picker */
   getAdvisers: async (): Promise<{ success: boolean; data: any[] }> => {
     const response = await apiClient.get('/advisers');

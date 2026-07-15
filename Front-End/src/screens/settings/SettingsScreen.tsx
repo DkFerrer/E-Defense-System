@@ -9,20 +9,32 @@ import { RoleLabels } from '../../types';
 export const SettingsScreen: React.FC = () => {
   const { user } = useAuth();
 
-  const menuItems = [
+  interface MenuItem {
+    icon: any;
+    label: string;
+    onPress?: () => void;
+    toggle?: boolean;
+  }
+
+  interface MenuSection {
+    section: string;
+    items: MenuItem[];
+  }
+
+  const menuItems: MenuSection[] = [
     { section: 'Account', items: [
-      { icon: 'person-outline' as const, label: 'Edit Profile', onPress: () => {} },
-      { icon: 'key-outline' as const, label: 'Change Password', onPress: () => {} },
+      { icon: 'person-outline', label: 'Edit Profile', onPress: () => {} },
+      { icon: 'key-outline', label: 'Change Password', onPress: () => {} },
     ]},
     { section: 'Notifications', items: [
-      { icon: 'notifications-outline' as const, label: 'Notification Preferences', onPress: () => {} },
-      { icon: 'mail-outline' as const, label: 'Email Notifications', toggle: true },
-      { icon: 'phone-portrait-outline' as const, label: 'Push Notifications', toggle: true },
+      { icon: 'notifications-outline', label: 'Notification Preferences', onPress: () => {} },
+      { icon: 'mail-outline', label: 'Email Notifications', toggle: true },
+      { icon: 'phone-portrait-outline', label: 'Push Notifications', toggle: true },
     ]},
     { section: 'About', items: [
-      { icon: 'information-circle-outline' as const, label: 'About E-Defense', onPress: () => {} },
-      { icon: 'help-circle-outline' as const, label: 'Help & Support', onPress: () => {} },
-      { icon: 'document-text-outline' as const, label: 'Terms & Privacy', onPress: () => {} },
+      { icon: 'information-circle-outline', label: 'About E-Defense', onPress: () => {} },
+      { icon: 'help-circle-outline', label: 'Help & Support', onPress: () => {} },
+      { icon: 'document-text-outline', label: 'Terms & Privacy', onPress: () => {} },
     ]},
   ];
 

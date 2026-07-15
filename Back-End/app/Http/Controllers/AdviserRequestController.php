@@ -55,7 +55,7 @@ class AdviserRequestController extends Controller
             'group_members' => 'nullable|string',
             'adviser_name' => 'required|string|max:255',
             'adviser_email' => 'required|email',
-            'expected_defense_date' => 'nullable|date',
+            'expected_defense_date' => 'nullable|string|max:255',
             'document_url' => 'nullable|string|url',
         ]);
 
@@ -117,12 +117,13 @@ class AdviserRequestController extends Controller
         ]);
 
         // Notify the student about the status change
-        $statusLabel = ucfirst($validated['status']);
+        $statusLabel = $validated['status'] === 'rejected' ? 'Returned' : 'Approved';
+        $actionLabel = $validated['status'] === 'rejected' ? 'returned' : 'approved';
         Notification::create([
             'user_id' => $adviserRequest->student_id,
             'type' => 'request_' . $validated['status'],
             'title' => "Research Proposal {$statusLabel}",
-            'message' => "Your research proposal \"{$adviserRequest->research_title}\" has been {$validated['status']} by {$request->user()->first_name} {$request->user()->last_name}." .
+            'message' => "Your research proposal \"{$adviserRequest->research_title}\" has been {$actionLabel} by {$request->user()->first_name} {$request->user()->last_name}." .
                 ($validated['status'] === 'rejected' && !empty($validated['rejection_reason'])
                     ? " Reason: {$validated['rejection_reason']}"
                     : ''),
@@ -133,6 +134,27 @@ class AdviserRequestController extends Controller
             'success' => true,
             'data' => $adviserRequest->fresh()->load(['student', 'statusUpdatedBy']),
             'message' => "Request {$statusLabel} successfully.",
+        ]);
+    }
+
+    /**
+     * Reset a request status back to pending (undo approve/reject).
+     */
+    public function resetStatus(Request $request, $id)
+    {
+        $adviserRequest = AdviserAcceptanceRequest::findOrFail($id);
+
+        $adviserRequest->update([
+            'status' => 'pending',
+            'status_updated_at' => null,
+            'status_updated_by' => null,
+            'rejection_reason' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $adviserRequest->fresh()->load(['student', 'statusUpdatedBy']),
+            'message' => 'Request reset to pending successfully.',
         ]);
     }
 }

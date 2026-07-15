@@ -55,6 +55,10 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
   const [advisers, setAdvisers] = useState<any[]>([]);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  // Search and status filter states for Adviser/Dean
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
   // Suggested E-Defense UI States
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -90,26 +94,31 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
   // Sync request status to Notification center dynamically
   useEffect(() => {
     if (existingRequest) {
-      const hasRequestNotif = notifications.some(n => n.id === 99 || n.id === 98 || n.id === 100);
-      if (!hasRequestNotif) {
-        const isApproved = existingRequest.status === 'approved';
-        const isRejected = existingRequest.status === 'rejected';
-        setNotifications(prev => [
-          {
-            id: isApproved ? 99 : isRejected ? 98 : 100,
-            title: isApproved ? 'Request Approved! 🎉' : isRejected ? 'Request Declined' : 'Request Submitted',
-            message: isApproved
-              ? `Your Adviser Acceptance Request for "${existingRequest.research_title}" has been APPROVED by ${existingRequest.adviser_name}.`
-              : isRejected
-                ? `Your request for "${existingRequest.research_title}" was declined. Reason: ${existingRequest.rejection_reason || 'Please contact your adviser.'}`
-                : `Your Adviser Acceptance Request is pending review by ${existingRequest.adviser_name}.`,
-            time: '1 min ago',
-            read: false,
-            type: isApproved ? 'success' : isRejected ? 'error' : 'warning',
-            icon: isApproved ? 'checkmark-circle-outline' : isRejected ? 'close-circle-outline' : 'time-outline'
-          },
-          ...prev
-        ]);
+      const isApproved = existingRequest.status === 'approved';
+      const isRejected = existingRequest.status === 'rejected';
+      const currentNotifId = isApproved ? 99 : isRejected ? 98 : 100;
+
+      const hasCurrentNotif = notifications.some(n => n.id === currentNotifId);
+      if (!hasCurrentNotif) {
+        setNotifications(prev => {
+          const filtered = prev.filter(n => n.id !== 99 && n.id !== 98 && n.id !== 100);
+          return [
+            {
+              id: currentNotifId,
+              title: isApproved ? 'Request Approved! 🎉' : isRejected ? 'Request Returned' : 'Request Submitted',
+              message: isApproved
+                ? `Your Adviser Acceptance Request for "${existingRequest.research_title}" has been APPROVED by ${existingRequest.adviser_name}.`
+                : isRejected
+                  ? `Your request for "${existingRequest.research_title}" was returned. Reason: ${existingRequest.rejection_reason || 'Please contact your adviser.'}`
+                  : `Your Adviser Acceptance Request is pending review by ${existingRequest.adviser_name}.`,
+              time: 'Just now',
+              read: false,
+              type: isApproved ? 'success' : isRejected ? 'warning' : 'warning',
+              icon: isApproved ? 'checkmark-circle-outline' : isRejected ? 'arrow-undo-outline' : 'time-outline'
+            },
+            ...filtered
+          ];
+        });
       }
     }
   }, [existingRequest]);
@@ -229,6 +238,34 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
     setFetching(false);
   }, [user]);
 
+  // Client-side filtering of adviser requests based on searchQuery and statusFilter
+  const filteredRequests = adviserRequests.filter(req => {
+    // 1. Filter by status
+    if (statusFilter !== 'All') {
+      const targetStatus = statusFilter === 'Return' ? 'rejected' : statusFilter.toLowerCase();
+      if (req.status !== targetStatus) {
+        return false;
+      }
+    }
+    // 2. Filter by search query
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      const title = (req.research_title || '').toLowerCase();
+      const studentName = `${req.student?.first_name || ''} ${req.student?.last_name || ''}`.toLowerCase();
+      const studentNo = (req.student?.student_number || '').toLowerCase();
+      const area = (req.research_area || '').toLowerCase();
+      const members = (req.group_members || '').toLowerCase();
+      
+      return title.includes(query) ||
+             studentName.includes(query) ||
+             studentNo.includes(query) ||
+             area.includes(query) ||
+             members.includes(query);
+    }
+    return true;
+  });
+
+
   const fetchStudentRequest = async () => {
     try {
       const response = await adviserRequestApi.getAll();
@@ -270,10 +307,24 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
         rejection_reason: comment || undefined
       });
       fetchAdviserRequests();
-      alert(`Request ${status} successfully!`);
+      alert(`Request ${status === 'rejected' ? 'returned' : status} successfully!`);
     } catch (error) {
       console.error('Failed to update status:', error);
       alert('Failed to update status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetStatus = async (id: number) => {
+    try {
+      setLoading(true);
+      await adviserRequestApi.resetStatus(id);
+      fetchAdviserRequests();
+      alert('Request reset to pending successfully!');
+    } catch (error) {
+      console.error('Failed to reset status:', error);
+      alert('Failed to reset status');
     } finally {
       setLoading(false);
     }
@@ -284,6 +335,11 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
       setLoading(true);
       setMessage(null);
 
+      let docUrl = formData.documentUrl ? formData.documentUrl.trim() : '';
+      if (docUrl && !/^https?:\/\//i.test(docUrl)) {
+        docUrl = 'https://' + docUrl;
+      }
+
       const payload: AdviserRequestPayload = {
         research_title: formData.researchTitle,
         research_area: formData.researchArea,
@@ -292,7 +348,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
         adviser_name: formData.preferredAdviser,
         adviser_email: formData.adviserEmail,
         expected_defense_date: formData.expectedDefenseDate,
-        document_url: formData.documentUrl,
+        document_url: docUrl,
       };
 
       await adviserRequestApi.create(payload);
@@ -369,9 +425,24 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
               elevation: 3
             }}
             onPress={() => {
-              if (existingRequest) {
+              if (existingRequest && existingRequest.status !== 'rejected') {
                 alert('You already have an active submission. Only one proposal is allowed at a time.');
               } else {
+                if (existingRequest && existingRequest.status === 'rejected') {
+                  setFormData({
+                    yearLevel: existingRequest.student?.grade_level || user?.grade_level || '3rd Year - 2nd Semester',
+                    contactNumber: existingRequest.student?.phone_number || user?.phone_number || '',
+                    emailAddress: existingRequest.student?.email || user?.email || '',
+                    researchTitle: existingRequest.research_title || '',
+                    researchArea: existingRequest.research_area || '',
+                    preferredAdviser: existingRequest.adviser_name || '',
+                    adviserEmail: existingRequest.adviser_email || '',
+                    groupMembers: existingRequest.group_members || '',
+                    researchObjectives: existingRequest.research_objectives || '',
+                    expectedDefenseDate: existingRequest.expected_defense_date || '',
+                    documentUrl: existingRequest.document_url || '',
+                  });
+                }
                 setShowSubmitModal(true);
               }
             }}
@@ -425,14 +496,14 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2D3748' }}>
-                      Adviser Decision: {existingRequest.status === 'approved' ? 'ADVISER APPROVED' : existingRequest.status.toUpperCase()}
+                      Adviser Decision: {existingRequest.status === 'approved' ? 'ADVISER APPROVED' : existingRequest.status === 'rejected' ? 'RETURNED' : existingRequest.status.toUpperCase()}
                     </Text>
                     <Text style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
                       {existingRequest.status === 'pending'
                         ? `Awaiting review by ${existingRequest.adviser_name}.`
                         : existingRequest.status === 'approved'
                           ? `Approved by ${existingRequest.adviser_name}. You are now ready to schedule a defense!`
-                          : `Declined by ${existingRequest.adviser_name}. Reason: ${existingRequest.rejection_reason || 'Please contact your adviser.'}`}
+                          : `Returned by ${existingRequest.adviser_name}. Reason: ${existingRequest.rejection_reason || 'Please contact your adviser.'}`}
                     </Text>
                   </View>
                 </View>
@@ -457,7 +528,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                   </View>
                   <TouchableOpacity
                     style={{ backgroundColor: '#1C64F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
-                    onPress={() => Linking.openURL(existingRequest.document_url).catch(err => console.error("Couldn't load page", err))}
+                    onPress={() => openDocumentLink(existingRequest.document_url)}
                   >
                     <Text style={{ color: '#FFF', fontSize: 11, fontWeight: 'bold' }}>View Document</Text>
                   </TouchableOpacity>
@@ -468,6 +539,48 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                 </View>
               )}
             </View>
+            {existingRequest.status === 'rejected' && (
+              <View style={{
+                backgroundColor: '#FFFBEB',
+                borderColor: '#FDE68A',
+                borderWidth: 1,
+                padding: 20,
+                borderRadius: 12,
+                marginTop: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 15
+              }}>
+                <View style={{ flex: 1, minWidth: 250 }}>
+                  <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#B45309', marginBottom: 4 }}>Proposal Returned</Text>
+                  <Text style={{ fontSize: 13, color: '#D97706', lineHeight: 18 }}>You can review the adviser's feedback, update your information, and re-submit the acceptance form.</Text>
+                </View>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#D97706', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
+                  onPress={() => {
+                    setFormData({
+                      yearLevel: existingRequest.student?.grade_level || user?.grade_level || '3rd Year - 2nd Semester',
+                      contactNumber: existingRequest.student?.phone_number || user?.phone_number || '',
+                      emailAddress: existingRequest.student?.email || user?.email || '',
+                      researchTitle: existingRequest.research_title || '',
+                      researchArea: existingRequest.research_area || '',
+                      preferredAdviser: existingRequest.adviser_name || '',
+                      adviserEmail: existingRequest.adviser_email || '',
+                      groupMembers: existingRequest.group_members || '',
+                      researchObjectives: existingRequest.research_objectives || '',
+                      expectedDefenseDate: existingRequest.expected_defense_date || '',
+                      documentUrl: existingRequest.document_url || '',
+                    });
+                    setShowSubmitModal(true);
+                  }}
+                >
+                  <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>Re-submit Form</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         ) : (
           <View style={[styles.card, { alignItems: 'center', padding: 50, backgroundColor: '#FFF' }]}>
@@ -733,34 +846,151 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
     );
   };
 
+  const openDocumentLink = (url: string) => {
+    if (!url) return;
+    let formattedUrl = url.trim();
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+    Linking.openURL(formattedUrl).catch(err => {
+      console.error("Couldn't load page", err);
+      try {
+        window.open(formattedUrl, '_blank');
+      } catch (e) {
+        alert('Failed to open link: ' + formattedUrl);
+      }
+    });
+  };
+
   const renderAdviserDashboard = () => (
     <View style={{ width: '100%', maxWidth: 1000, alignSelf: 'center' }}>
       <Text style={[styles.cardTitle, { marginBottom: 20, fontSize: 24 }]}>Student Submissions</Text>
 
-      {adviserRequests.length === 0 ? (
+      {/* Search and Filter Section */}
+      <View style={{
+        flexDirection: 'row',
+        gap: 15,
+        marginBottom: 20,
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        backgroundColor: '#FFF',
+        padding: 15,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+      }}>
+        {/* Search Bar */}
+        <View style={{ flex: 2, minWidth: 200, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#CBD5E0', borderRadius: 6, paddingHorizontal: 10, height: 40 }}>
+          <Ionicons name="search-outline" size={18} color="#718096" style={{ marginRight: 8 }} />
+          <TextInput
+            placeholder="Search by title, student, area, members..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{ flex: 1, height: '100%', outlineStyle: 'none' as any, fontSize: 13, color: '#2D3748' }}
+          />
+          {searchQuery !== '' && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color="#A0AEC0" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Status Dropdown */}
+        <View style={{ width: 180, minWidth: 150 }}>
+          <View style={{ borderWidth: 1, borderColor: '#CBD5E0', borderRadius: 6, backgroundColor: '#FFF', height: 40, justifyContent: 'center' }}>
+            <Picker
+              selectedValue={statusFilter}
+              onValueChange={(itemValue) => setStatusFilter(itemValue)}
+              style={{ height: 40, color: '#2D3748', fontSize: 13, borderStyle: 'none' as any }}
+            >
+              <Picker.Item label="All" value="All" />
+              <Picker.Item label="Pending" value="Pending" />
+              <Picker.Item label="Approved" value="Approved" />
+              <Picker.Item label="Return" value="Return" />
+            </Picker>
+          </View>
+        </View>
+      </View>
+
+      {filteredRequests.length === 0 ? (
         <View style={[styles.card, { alignItems: 'center', padding: 50 }]}>
           <Ionicons name="file-tray-outline" size={60} color="#CBD5E0" />
-          <Text style={{ marginTop: 20, color: '#718096', fontSize: 16 }}>No student submissions yet.</Text>
+          <Text style={{ marginTop: 20, color: '#718096', fontSize: 16 }}>
+            {adviserRequests.length === 0 ? 'No student submissions yet.' : 'No submissions match your filters.'}
+          </Text>
         </View>
       ) : (
-        adviserRequests.map((req) => (
+        filteredRequests.map((req) => (
           <View key={req.id} style={[styles.card, { marginBottom: 20 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, color: '#1C64F2', fontWeight: 'bold', marginBottom: 5 }}>{req.status.toUpperCase()}</Text>
+                <Text style={{ fontSize: 14, color: req.status === 'rejected' ? '#D97706' : '#1C64F2', fontWeight: 'bold', marginBottom: 5 }}>
+                  {req.status === 'rejected' ? 'RETURNED' : req.status.toUpperCase()}
+                </Text>
                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2D3748', marginBottom: 10 }}>{req.research_title}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
-                  <Ionicons name="person-circle-outline" size={20} color="#718096" />
-                  <Text style={{ marginLeft: 8, color: '#4A5568', fontSize: 14 }}>
-                    Submitted by: {req.student?.first_name} {req.student?.last_name} ({req.student?.student_number || '2026-0001'})
-                  </Text>
+                
+                {/* Student Full Information Section */}
+                <View style={{ backgroundColor: '#F8FAFC', padding: 15, borderRadius: 8, marginBottom: 15, borderLeftWidth: 3, borderLeftColor: '#3B82F6' }}>
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#1E293B', marginBottom: 10 }}>Student Profile & Contact Information</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15 }}>
+                    <View style={{ minWidth: 200, flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Full Name</Text>
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '500', marginTop: 2 }}>
+                        {req.student?.first_name} {req.student?.last_name}
+                      </Text>
+                    </View>
+                    <View style={{ minWidth: 120, flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Student ID</Text>
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '500', marginTop: 2 }}>
+                        {req.student?.student_number || 'N/A'}
+                      </Text>
+                    </View>
+                    <View style={{ minWidth: 180, flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Email Address</Text>
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '500', marginTop: 2 }}>
+                        {req.student?.email || 'N/A'}
+                      </Text>
+                    </View>
+                    <View style={{ minWidth: 120, flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Contact Number</Text>
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '500', marginTop: 2 }}>
+                        {req.student?.phone_number || 'N/A'}
+                      </Text>
+                    </View>
+                    <View style={{ minWidth: 150, flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Course / Program</Text>
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '500', marginTop: 2 }}>
+                        {req.student?.course || 'N/A'}
+                      </Text>
+                    </View>
+                    <View style={{ minWidth: 150, flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Year & Semester</Text>
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '500', marginTop: 2 }}>
+                        {req.student?.grade_level || 'N/A'}
+                      </Text>
+                    </View>
+                    <View style={{ minWidth: 120, flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: '600' }}>Department</Text>
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '500', marginTop: 2 }}>
+                        {req.student?.department || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
-                <View style={{ backgroundColor: '#F7FAFC', padding: 15, borderRadius: 8, marginBottom: 20 }}>
+                {/* Research Objectives Section */}
+                <View style={{ backgroundColor: '#F8FAFC', padding: 15, borderRadius: 8, marginBottom: 15 }}>
                   <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#4A5568', marginBottom: 5 }}>Research Objectives:</Text>
                   <Text style={{ fontSize: 13, color: '#718096', lineHeight: 20 }}>{req.research_objectives || 'No objectives provided.'}</Text>
                 </View>
 
+                {/* Group Members Section */}
+                <View style={{ backgroundColor: '#F8FAFC', padding: 15, borderRadius: 8, marginBottom: 15 }}>
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#4A5568', marginBottom: 5 }}>Group Members:</Text>
+                  <Text style={{ fontSize: 13, color: '#718096', lineHeight: 20 }}>{req.group_members || 'No other group members listed.'}</Text>
+                </View>
+
+                {/* Document Link */}
                 {req.document_url ? (
                   <View style={{ backgroundColor: '#EEF2FF', padding: 15, borderRadius: 8, marginBottom: 20, borderLeftWidth: 4, borderLeftColor: '#4F46E5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 200 }}>
@@ -772,7 +1002,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                     </View>
                     <TouchableOpacity
                       style={{ backgroundColor: '#4F46E5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
-                      onPress={() => Linking.openURL(req.document_url).catch(err => console.error("Couldn't load page", err))}
+                      onPress={() => openDocumentLink(req.document_url)}
                     >
                       <Text style={{ color: '#FFF', fontSize: 11, fontWeight: 'bold' }}>Open Document</Text>
                     </TouchableOpacity>
@@ -807,7 +1037,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                 <TextInput
                   style={[styles.input, { height: 80, textAlignVertical: 'top', paddingTop: 10, marginBottom: 15 }]}
                   multiline
-                  placeholder="Enter your feedback or reason for rejection (optional)..."
+                  placeholder="Enter your feedback or reason for returning the proposal (optional)..."
                   value={reviewComments[req.id] || ''}
                   onChangeText={(text) => setReviewComments(prev => ({ ...prev, [req.id]: text }))}
                 />
@@ -822,7 +1052,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                     style={{ backgroundColor: '#EF4444', flex: 1, paddingVertical: 12, borderRadius: 6, alignItems: 'center' }}
                     onPress={() => handleUpdateStatus(req.id, 'rejected', reviewComments[req.id])}
                   >
-                    <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Reject Request</Text>
+                    <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Return Request</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -911,7 +1141,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                     fontWeight: 'bold',
                     color: !existingRequest ? '#475569' : existingRequest.status === 'pending' ? '#B45309' : '#B91C1C'
                   }}>
-                    {!existingRequest ? 'No Proposal Submitted' : existingRequest.status === 'pending' ? 'Pending Adviser Decision' : 'Declined / Re-upload Required'}
+                    {!existingRequest ? 'No Proposal Submitted' : existingRequest.status === 'pending' ? 'Pending Adviser Decision' : 'Returned / Re-upload Required'}
                   </Text>
                 </View>
               </View>
@@ -1175,16 +1405,26 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
             <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2D3748', marginBottom: 15 }}>Processed Requests</Text>
             {adviserRequests.map((req) => (
               <View key={req.id} style={{ borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: '600', color: '#2D3748' }}>{req.research_title}</Text>
                   <Text style={{ fontSize: 12, color: '#718096', marginTop: 4 }}>
                     Student: {req.student?.first_name} {req.student?.last_name} | Adviser: {req.adviser_name}
                   </Text>
                 </View>
-                <View style={{ backgroundColor: req.status === 'approved' ? '#D1FAE5' : req.status === 'rejected' ? '#FEE2E2' : '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: req.status === 'approved' ? '#065F46' : req.status === 'rejected' ? '#991B1B' : '#92400E' }}>
-                    {req.status.toUpperCase()}
-                  </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {req.status !== 'pending' && (
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#F59E0B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}
+                      onPress={() => handleResetStatus(req.id)}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#FFF' }}>Reset to Pending</Text>
+                    </TouchableOpacity>
+                  )}
+                  <View style={{ backgroundColor: req.status === 'approved' ? '#D1FAE5' : req.status === 'rejected' ? '#FFEFE2' : '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: req.status === 'approved' ? '#065F46' : req.status === 'rejected' ? '#D97706' : '#92400E' }}>
+                      {req.status === 'rejected' ? 'RETURNED' : req.status.toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
               </View>
             ))}
@@ -1253,9 +1493,9 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                     ? `Form UNC-FM-RC-31 is under active evaluation by Dr. ${existingRequest.preferred_adviser || existingRequest.adviser_name}.`
                     : existingRequest.status === 'approved'
                       ? `Request approved by Dr. ${existingRequest.preferred_adviser || existingRequest.adviser_name}. Adviser Acceptance confirmed.`
-                      : `Declined by Dr. ${existingRequest.preferred_adviser || existingRequest.adviser_name}. Reason: ${existingRequest.rejection_reason || 'Re-upload requested.'}`}
+                      : `Returned by Dr. ${existingRequest.preferred_adviser || existingRequest.adviser_name}. Reason: ${existingRequest.rejection_reason || 'Re-upload requested.'}`}
                 </Text>
-                <Text style={{ fontSize: 11, color: '#A0AEC0', marginTop: 6 }}>Status Code: {existingRequest.status.toUpperCase()}</Text>
+                <Text style={{ fontSize: 11, color: '#A0AEC0', marginTop: 6 }}>Status Code: {existingRequest.status === 'rejected' ? 'RETURNED' : existingRequest.status.toUpperCase()}</Text>
               </View>
             </View>
 
@@ -1319,7 +1559,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
           <View style={styles.card}>
             <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2D3748', marginBottom: 10 }}>Research Progress & Document</Text>
             {selectedResultGroup.document_url ? (
-              <TouchableOpacity onPress={() => Linking.openURL(selectedResultGroup.document_url)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F4FE', padding: 15, borderRadius: 8, marginBottom: 15 }}>
+              <TouchableOpacity onPress={() => openDocumentLink(selectedResultGroup.document_url)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F4FE', padding: 15, borderRadius: 8, marginBottom: 15 }}>
                 <Ionicons name="document-text" size={24} color="#1C64F2" style={{ marginRight: 10 }} />
                 <Text style={{ color: '#1C64F2', fontWeight: '500', textDecorationLine: 'underline' }}>View Submitted Proposal Document</Text>
               </TouchableOpacity>
@@ -1330,6 +1570,18 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
             <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#4A5568', marginBottom: 5 }}>Research Objectives:</Text>
             <Text style={{ fontSize: 14, color: '#4A5568', marginBottom: 15 }}>{selectedResultGroup.research_objectives || 'None provided.'}</Text>
           </View>
+
+          {user?.role !== 'dean' && selectedResultGroup.status !== 'pending' && (
+            <TouchableOpacity
+              style={{ backgroundColor: '#F59E0B', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 10 }}
+              onPress={() => {
+                handleResetStatus(selectedResultGroup.id);
+                setSelectedResultGroup(null);
+              }}
+            >
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Reset to Pending</Text>
+            </TouchableOpacity>
+          )}
         </View>
       );
     }
@@ -1339,8 +1591,54 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
         <Text style={[styles.cardTitle, { marginBottom: 5, fontSize: 24 }]}>Advisees Progress Results</Text>
         <Text style={{ fontSize: 13, color: '#718096', marginBottom: 15 }}>Select a group to view their progress, members, and evaluate their proposal.</Text>
 
+        {/* Search and Filter Section */}
+        <View style={{
+          flexDirection: 'row',
+          gap: 15,
+          marginBottom: 15,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          backgroundColor: '#FFF',
+          padding: 12,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+        }}>
+          {/* Search Bar */}
+          <View style={{ flex: 2, minWidth: 200, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#CBD5E0', borderRadius: 6, paddingHorizontal: 10, height: 40 }}>
+            <Ionicons name="search-outline" size={18} color="#718096" style={{ marginRight: 8 }} />
+            <TextInput
+              placeholder="Search by title, student, area, members..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={{ flex: 1, height: '100%', outlineStyle: 'none' as any, fontSize: 13, color: '#2D3748' }}
+            />
+            {searchQuery !== '' && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={16} color="#A0AEC0" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Status Dropdown */}
+          <View style={{ width: 180, minWidth: 150 }}>
+            <View style={{ borderWidth: 1, borderColor: '#CBD5E0', borderRadius: 6, backgroundColor: '#FFF', height: 40, justifyContent: 'center' }}>
+              <Picker
+                selectedValue={statusFilter}
+                onValueChange={(itemValue) => setStatusFilter(itemValue)}
+                style={{ height: 40, color: '#2D3748', fontSize: 13, borderStyle: 'none' as any }}
+              >
+                <Picker.Item label="All" value="All" />
+                <Picker.Item label="Pending" value="Pending" />
+                <Picker.Item label="Approved" value="Approved" />
+                <Picker.Item label="Return" value="Return" />
+              </Picker>
+            </View>
+          </View>
+        </View>
+
         <View style={{ gap: 15 }}>
-          {adviserRequests.map(req => (
+          {filteredRequests.map(req => (
             <TouchableOpacity
               key={req.id}
               style={[styles.card, { borderLeftWidth: 4, borderLeftColor: req.status === 'approved' ? '#10B981' : req.status === 'pending' ? '#F59E0B' : '#EF4444' }]}
@@ -1356,14 +1654,16 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
                 </View>
                 <View style={{ backgroundColor: req.status === 'approved' ? '#D1FAE5' : req.status === 'pending' ? '#FEF3C7' : '#FEE2E2', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginLeft: 10 }}>
                   <Text style={{ fontSize: 11, fontWeight: 'bold', color: req.status === 'approved' ? '#065F46' : req.status === 'pending' ? '#92400E' : '#991B1B' }}>
-                    {req.status.toUpperCase()}
+                    {req.status === 'rejected' ? 'RETURNED' : req.status.toUpperCase()}
                   </Text>
                 </View>
               </View>
             </TouchableOpacity>
           ))}
-          {adviserRequests.length === 0 && (
-            <Text style={{ textAlign: 'center', color: '#718096', marginTop: 20 }}>No advisees or submissions found.</Text>
+          {filteredRequests.length === 0 && (
+            <Text style={{ textAlign: 'center', color: '#718096', marginTop: 20 }}>
+              {adviserRequests.length === 0 ? 'No advisees or submissions found.' : 'No advisees match your filters.'}
+            </Text>
           )}
         </View>
       </View>
@@ -1738,13 +2038,55 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const getHeaderConfig = (tab: string) => {
+    switch (tab) {
+      case 'My Dashboard':
+        return {
+          title: 'My Dashboard',
+          subtitle: 'Overview of defense activities and research requests'
+        };
+      case 'Book a Defense':
+      case 'Book a defense':
+        return {
+          title: 'Book a Defense',
+          subtitle: 'Select available schedules and book your presentation'
+        };
+      case 'Submitted':
+        return {
+          title: 'Submitted Proposals',
+          subtitle: 'Track status and review history of submitted works'
+        };
+      case 'Results':
+        return {
+          title: 'Evaluation Results',
+          subtitle: 'View panel grading scores, rubrics, and feedback'
+        };
+      case 'Profile':
+        return {
+          title: 'User Profile',
+          subtitle: 'Manage your account security and profile information'
+        };
+      default:
+        return {
+          title: tab,
+          subtitle: 'UNC Research Defense System'
+        };
+    }
+  };
+
+  const headerConfig = getHeaderConfig(activeTab);
+
   return (
     <View style={styles.container}>
       {/* Sidebar */}
       <View style={styles.sidebar}>
         <View style={styles.sidebarLogoContainer}>
-          <Image source={UNCLogo} style={styles.sidebarLogo} resizeMode="contain" />
-          <Text style={styles.sidebarBrand}>E-Defense</Text>
+          <View style={styles.logoCircle}>
+            <Image source={UNCLogo} style={styles.sidebarLogo} resizeMode="contain" />
+          </View>
+          <View style={styles.sidebarBrandContainer}>
+            <Text style={styles.sidebarBrandMain}>UNC Research</Text>
+          </View>
         </View>
 
         <View style={styles.menuContainer}>
@@ -1760,7 +2102,7 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
               <Ionicons
                 name={item.icon as any}
                 size={18}
-                color={activeTab === item.name ? '#FFF' : '#A0AEC0'}
+                color={activeTab === item.name ? '#FFF' : '#9CA3AF'}
               />
               <Text style={[
                 styles.menuItemText,
@@ -1777,25 +2119,39 @@ import UNCLogo from '../../assets/unc-logo.png'; export const DashboardScreen: R
       <View style={styles.mainContent}>
         {/* Topbar */}
         <View style={styles.topbar}>
-          <View style={{ flex: 1 }} />
-          <View style={styles.topbarRight}>
-            <Text style={styles.greetingText}>Hi, <Text style={{ fontWeight: 'bold' }}>{user?.first_name || 'User'}</Text></Text>
-            <View style={styles.profileAvatar}>
-              <Ionicons name="person" size={16} color="#A0AEC0" />
-            </View>
+          <View style={styles.topbarLeft}>
+            <Text style={styles.topbarTitle}>{headerConfig.title}</Text>
+            <Text style={styles.topbarSubtitle}>{headerConfig.subtitle}</Text>
+          </View>
 
+          <View style={styles.topbarRight}>
             {/* Interactive Notification Bell */}
             <TouchableOpacity
-              style={[styles.notificationIcon, { position: 'relative' }]}
+              style={styles.notificationIcon}
               onPress={() => setShowNotifications(!showNotifications)}
             >
-              <Ionicons name="notifications-outline" size={20} color="#4A5568" />
+              <Ionicons name="notifications-outline" size={22} color="#4B5563" />
               {unreadCount > 0 && (
                 <View style={styles.notificationBadge}>
                   <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
+
+            {/* User Info */}
+            <View style={styles.userSection}>
+              <View style={styles.profileAvatar}>
+                <Text style={styles.avatarText}>
+                  {(user?.first_name?.[0] || 'U').toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.userMeta}>
+                <Text style={styles.userName}>{user?.first_name} {user?.last_name}</Text>
+                <Text style={styles.userRole}>
+                  {user?.role === 'student_researcher' ? 'Student' : user?.role === 'adviser' ? 'Adviser' : user?.role === 'dean' ? 'Dean' : 'User'}
+                </Text>
+              </View>
+            </View>
 
             <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
               <Ionicons name="log-out-outline" size={16} color="#FFF" />
@@ -1919,26 +2275,43 @@ const styles = StyleSheet.create({
   },
   // Sidebar
   sidebar: {
-    width: 250,
-    backgroundColor: '#303030',
-    paddingTop: 30,
+    width: 240,
+    backgroundColor: '#151515',
+    paddingTop: 25,
     height: '100%',
   },
   sidebarLogoContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
+    paddingHorizontal: 20,
+    marginBottom: 35,
+  },
+  logoCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sidebarLogo: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#FFF',
-    borderRadius: 30,
-    marginBottom: 10,
+    width: 30,
+    height: 30,
   },
-  sidebarBrand: {
-    color: '#E74C3C',
-    fontSize: 16,
+  sidebarBrandContainer: {
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  sidebarBrandMain: {
+    color: '#FFF',
+    fontSize: 14,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  sidebarBrandSub: {
+    color: '#94A3B8',
+    fontSize: 10,
+    marginTop: 1,
   },
   menuContainer: {
     paddingHorizontal: 15,
@@ -1952,16 +2325,16 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   menuItemActive: {
-    backgroundColor: '#404040',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   menuItemText: {
-    color: '#A0AEC0',
+    color: '#9CA3AF',
     fontSize: 14,
     marginLeft: 15,
   },
   menuItemTextActive: {
     color: '#FFF',
-    fontWeight: '500',
+    fontWeight: 'bold',
   },
 
   // Main Content
@@ -1970,38 +2343,74 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   topbar: {
-    height: 60,
-    backgroundColor: '#303030',
+    height: 70,
+    backgroundColor: '#FFF',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  topbarLeft: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  topbarTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  topbarSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   topbarRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 15,
   },
-  greetingText: {
-    color: '#FFF',
-    fontSize: 13,
-    marginRight: 15,
+  userSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
   },
   profileAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#E2E8F0',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#1C64F2',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  userMeta: {
+    marginLeft: 10,
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  userRole: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
   },
   notificationIcon: {
-    marginRight: 20,
     position: 'relative',
+    padding: 5,
+    marginRight: 10,
   },
   notificationBadge: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: 0,
+    right: 0,
     backgroundColor: '#E74C3C',
     width: 14,
     height: 14,
@@ -2017,16 +2426,16 @@ const styles = StyleSheet.create({
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E74C3C',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+    backgroundColor: '#C0392B',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 6,
   },
   logoutText: {
     color: '#FFF',
-    fontSize: 12,
-    marginLeft: 5,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginLeft: 6,
   },
 
   // Content
@@ -2131,7 +2540,7 @@ const styles = StyleSheet.create({
     height: 40,
     fontSize: 13,
     color: '#2D3748',
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
   },
   inputDisabled: {
     backgroundColor: '#F7FAFC',
@@ -2151,7 +2560,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2D3748',
     height: '100%',
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    backgroundColor: '#FFF',
+    height: 40,
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 40,
+    color: '#2D3748',
   },
   noteBox: {
     backgroundColor: '#EBF5FF',

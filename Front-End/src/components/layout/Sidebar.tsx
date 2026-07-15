@@ -41,8 +41,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, unre
         <View style={styles.logoCircle}>
           <Image source={UNCLogo} style={styles.logoImage} resizeMode="contain" />
         </View>
-        <Text style={styles.appName}>UNC Research</Text>
-        <Text style={styles.appSubtitle}>Monitoring & Notification</Text>
+        <View style={styles.sidebarBrandContainer}>
+          <Text style={styles.appName}>UNC Research</Text>
+        </View>
       </View>
 
       {/* Divider */}
@@ -63,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, unre
               <Ionicons
                 name={isActive ? item.iconActive : item.icon}
                 size={20}
-                color={isActive ? Colors.white : Colors.sidebar.text}
+                color={isActive ? '#FFF' : '#9CA3AF'}
               />
               <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
                 {item.label}
@@ -106,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, unre
 const styles = StyleSheet.create({
   container: {
     width: SIDEBAR_WIDTH,
-    backgroundColor: Colors.sidebar.background,
+    backgroundColor: '#151515',
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
     height: '100%',
@@ -114,34 +115,38 @@ const styles = StyleSheet.create({
 
   // Logo Section
   logoSection: {
+    flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.sidebar.logoBackground,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
-    overflow: 'hidden',
   },
   logoImage: {
-    width: 52,
-    height: 52,
+    width: 30,
+    height: 30,
+  },
+  sidebarBrandContainer: {
+    marginLeft: 12,
+    justifyContent: 'center',
   },
   appName: {
-    fontSize: FontSizes.md,
+    fontSize: 14,
     fontWeight: FontWeights.bold,
-    color: Colors.sidebar.textActive,
-    letterSpacing: 0.3,
+    color: '#FFF',
+    letterSpacing: 0.5,
   },
   appSubtitle: {
-    fontSize: FontSizes.xs,
-    color: Colors.sidebar.text,
-    marginTop: 2,
+    fontSize: 10,
+    color: '#94A3B8',
+    marginTop: 1,
   },
 
   // Divider
@@ -168,7 +173,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: Colors.sidebar.backgroundLight,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   activeBar: {
     position: 'absolute',
@@ -180,18 +185,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   activeBarVisible: {
-    backgroundColor: Colors.sidebar.activeIndicator,
+    backgroundColor: 'transparent',
   },
   navLabel: {
     fontSize: FontSizes.sm,
-    color: Colors.sidebar.text,
+    color: '#9CA3AF',
     marginLeft: Spacing.sm + 2,
     fontWeight: FontWeights.medium,
     flex: 1,
   },
   navLabelActive: {
-    color: Colors.sidebar.textActive,
-    fontWeight: FontWeights.semibold,
+    color: '#FFF',
+    fontWeight: FontWeights.bold,
   },
   badge: {
     backgroundColor: Colors.danger,

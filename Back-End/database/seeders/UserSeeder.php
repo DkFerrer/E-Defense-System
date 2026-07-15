@@ -13,6 +13,29 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        // ─── Demo Accounts ────────────────────────────────────────────
+        // Dean Demo Account  |  email: dean.demo@unc.edu.ph  |  password: demo1234
+        User::create([
+            'first_name' => 'Demo',
+            'last_name' => 'Dean',
+            'email' => 'dean.demo@unc.edu.ph',
+            'password' => Hash::make('demo1234'),
+            'role' => 'dean',
+            'department' => 'Dean Office',
+            'college' => 'College of Engineering',
+        ]);
+
+        // Adviser Demo Account  |  email: adviser.demo@unc.edu.ph  |  password: demo1234
+        User::create([
+            'first_name' => 'Demo',
+            'last_name' => 'Adviser',
+            'email' => 'adviser.demo@unc.edu.ph',
+            'password' => Hash::make('demo1234'),
+            'role' => 'adviser',
+            'department' => 'Computer Science',
+            'college' => 'College of Engineering',
+        ]);
+
         // Create admin user
         User::create([
             'first_name' => 'Admin',

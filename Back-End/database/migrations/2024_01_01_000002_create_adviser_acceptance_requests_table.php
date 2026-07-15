@@ -20,7 +20,7 @@ return new class extends Migration
             $table->text('group_members')->nullable();
             $table->string('adviser_name');
             $table->string('adviser_email');
-            $table->date('expected_defense_date')->nullable();
+            $table->string('expected_defense_date')->nullable();
             $table->string('document_url')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamp('status_updated_at')->nullable();

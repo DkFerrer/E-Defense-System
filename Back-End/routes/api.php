@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [AdviserRequestController::class, 'store']);
         Route::get('/{id}', [AdviserRequestController::class, 'show']);
         Route::patch('/{id}/status', [AdviserRequestController::class, 'updateStatus']);
+        Route::patch('/{id}/reset', [AdviserRequestController::class, 'resetStatus']);
     });
 
     // Dashboard

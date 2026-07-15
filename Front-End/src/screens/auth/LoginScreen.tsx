@@ -9,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../../contexts/AuthContext';
 
 // @ts-ignore
@@ -17,11 +16,10 @@ import UNCLogo from '../../assets/unc-logo.png';
 
 export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { login } = useAuth();
-  const [username, setUsername] = useState('juan.delacruz@student.unc.edu.ph');
-  const [password, setPassword] = useState('password123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [userType, setUserType] = useState('Student Researcher');
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -66,46 +64,11 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             Sign in with your registered email and password.
           </Text>
 
-          {/* Quick Demo Accounts Helper */}
-          <View style={{ backgroundColor: '#EBF5FF', borderLeftWidth: 4, borderLeftColor: '#1C64F2', padding: 12, borderRadius: 6, marginBottom: 20 }}>
-            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#1E3A8A', marginBottom: 4 }}>💡 Demo Seeded Accounts (Password: password123):</Text>
-            <Text style={{ fontSize: 12, color: '#1E40AF' }}>• <Text style={{ fontWeight: '600' }}>Student:</Text> juan.delacruz@student.unc.edu.ph</Text>
-            <Text style={{ fontSize: 12, color: '#1E40AF' }}>• <Text style={{ fontWeight: '600' }}>Adviser:</Text> maria.danila@unc.edu.ph</Text>
-            <Text style={{ fontSize: 12, color: '#1E40AF' }}>• <Text style={{ fontWeight: '600' }}>Dean:</Text> agnes.reyes@unc.edu.ph</Text>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Login As:</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={userType}
-                onValueChange={(itemValue) => {
-                  setUserType(itemValue);
-                  if (itemValue === 'Student Researcher') {
-                    setUsername('juan.delacruz@student.unc.edu.ph');
-                    setPassword('password123');
-                  } else if (itemValue === 'Adviser') {
-                    setUsername('maria.danila@unc.edu.ph');
-                    setPassword('password123');
-                  } else if (itemValue === 'Dean') {
-                    setUsername('agnes.reyes@unc.edu.ph');
-                    setPassword('password123');
-                  }
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Student Researcher" value="Student Researcher" />
-                <Picker.Item label="Dean" value="Dean" />
-                <Picker.Item label="Adviser" value="Adviser" />
-              </Picker>
-            </View>
-          </View>
-
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Email Address:</Text>
             <TextInput
               style={styles.input}
-              placeholder="juan.delacruz@student.unc.edu.ph"
+              placeholder="Enter your email address"
               placeholderTextColor="#A0AEC0"
               value={username}
               onChangeText={setUsername}
@@ -149,6 +112,48 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             <Text style={styles.registerText}>Don't have an account?</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
               <Text style={styles.registerLink}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Demo Accounts Panel ── */}
+          <View style={styles.demoPanel}>
+            <Text style={styles.demoPanelTitle}>🔑 Demo Accounts</Text>
+            <Text style={styles.demoPanelHint}>Tap a card to auto-fill credentials</Text>
+
+            <TouchableOpacity
+              style={styles.demoCard}
+              activeOpacity={0.75}
+              onPress={() => {
+                setUsername('dean.demo@unc.edu.ph');
+                setPassword('demo1234');
+              }}
+            >
+              <View style={[styles.demoRoleBadge, { backgroundColor: '#7C3AED' }]}>
+                <Text style={styles.demoRoleText}>DEAN</Text>
+              </View>
+              <View style={styles.demoCardInfo}>
+                <Text style={styles.demoEmail}>dean.demo@unc.edu.ph</Text>
+                <Text style={styles.demoPassword}>Password: demo1234</Text>
+              </View>
+              <Ionicons name="arrow-forward-circle-outline" size={20} color="#7C3AED" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.demoCard}
+              activeOpacity={0.75}
+              onPress={() => {
+                setUsername('adviser.demo@unc.edu.ph');
+                setPassword('demo1234');
+              }}
+            >
+              <View style={[styles.demoRoleBadge, { backgroundColor: '#0891B2' }]}>
+                <Text style={styles.demoRoleText}>ADVISER</Text>
+              </View>
+              <View style={styles.demoCardInfo}>
+                <Text style={styles.demoEmail}>adviser.demo@unc.edu.ph</Text>
+                <Text style={styles.demoPassword}>Password: demo1234</Text>
+              </View>
+              <Ionicons name="arrow-forward-circle-outline" size={20} color="#0891B2" />
             </TouchableOpacity>
           </View>
         </View>
@@ -238,7 +243,7 @@ const styles = StyleSheet.create({
     height: 45,
     fontSize: 14,
     color: '#2D3748',
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
   },
   pickerContainer: {
     backgroundColor: '#FFFFFF',
@@ -257,7 +262,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2D3748',
     paddingHorizontal: 10,
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
   },
   passwordInputContainer: {
     flexDirection: 'row',
@@ -274,7 +279,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2D3748',
     height: '100%',
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
   },
   forgotLink: {
     alignSelf: 'flex-end',
@@ -311,5 +316,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1C64F2',
     fontWeight: '500',
+  },
+  // ── Demo Accounts Panel ──────────────────────────────────────
+  demoPanel: {
+    marginTop: 28,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 20,
+  },
+  demoPanelTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2D3748',
+    marginBottom: 2,
+  },
+  demoPanelHint: {
+    fontSize: 11,
+    color: '#A0AEC0',
+    marginBottom: 12,
+  },
+  demoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  demoRoleBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 12,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  demoRoleText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.8,
+  },
+  demoCardInfo: {
+    flex: 1,
+  },
+  demoEmail: {
+    fontSize: 13,
+    color: '#2D3748',
+    fontWeight: '500',
+  },
+  demoPassword: {
+    fontSize: 11,
+    color: '#718096',
+    marginTop: 2,
   },
 });

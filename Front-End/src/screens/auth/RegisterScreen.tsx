@@ -38,9 +38,6 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedGradeLevel, setSelectedGradeLevel] = useState('');
 
-  const [birthDay, setBirthDay] = useState('');
-  const [birthMonth, setBirthMonth] = useState('');
-  const [birthYear, setBirthYear] = useState('');
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -54,14 +51,6 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     "College of Engineering and Architecture": ["BS Civil Engineering", "BS Mechanical Engineering", "BS Computer Engineering", "BS Electrical Engineering", "BS Electronics and Communication Engineering", "BS Interior Design", "BS Architecture"],
     "College of Criminal Justice": ["BS Criminology", "BS Forensic Science"]
   };
-
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-
-  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
-  const years = Array.from({ length: 101 }, (_, i) => (2026 - i).toString());
 
   const gradeLevels = [
     "3rd Year - 2nd Sem",
@@ -79,11 +68,6 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         return;
       }
 
-      const monthIndex = months.indexOf(birthMonth) + 1;
-      const formattedBirthdate = birthYear && birthMonth && birthDay
-        ? `${birthYear}-${monthIndex.toString().padStart(2, '0')}-${birthDay.padStart(2, '0')}`
-        : undefined;
-
       await register({
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -97,7 +81,6 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         course: selectedCourse,
         grade_level: selectedGradeLevel,
         phone_number: formData.phone_number,
-        birthdate: formattedBirthdate,
         role: 'student_researcher',
         college: selectedDepartment,
       });
@@ -117,7 +100,7 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       <View style={styles.leftPanel}>
         <View style={styles.leftContent}>
           <View style={styles.logoCircle}>
-            <Image source={UNCLogo} style={styles.logoImage} resizeMode="contain" />
+            <Image source={UNCLogo} style={styles.logoImage as any} resizeMode="contain" />
           </View>
           <Text style={styles.brandTitle}>Research Defense Scheduler</Text>
           <Text style={styles.brandSubtitle}>
@@ -180,54 +163,6 @@ export const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   value={formData.suffix}
                   onChangeText={(val) => setFormData({ ...formData, suffix: val })}
                 />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Birthdate: <Text style={styles.asterisk}>*</Text></Text>
-              <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: 5 }}>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={birthMonth}
-                      onValueChange={(itemValue) => setBirthMonth(itemValue)}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Month" value="" color="#A0AEC0" />
-                      {months.map((m) => (
-                        <Picker.Item key={m} label={m} value={m} />
-                      ))}
-                    </Picker>
-                  </View>
-                </View>
-                <View style={{ width: 80, marginHorizontal: 5 }}>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={birthDay}
-                      onValueChange={(itemValue) => setBirthDay(itemValue)}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Day" value="" color="#A0AEC0" />
-                      {days.map((d) => (
-                        <Picker.Item key={d} label={d} value={d} />
-                      ))}
-                    </Picker>
-                  </View>
-                </View>
-                <View style={{ width: 100, marginLeft: 5 }}>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={birthYear}
-                      onValueChange={(itemValue) => setBirthYear(itemValue)}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Year" value="" color="#A0AEC0" />
-                      {years.map((y) => (
-                        <Picker.Item key={y} label={y} value={y} />
-                      ))}
-                    </Picker>
-                  </View>
-                </View>
               </View>
             </View>
 
@@ -385,7 +320,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#303030',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'fixed',
+    position: 'fixed' as any,
     height: '100%',
     left: 0,
     top: 0,
@@ -470,7 +405,7 @@ const styles = StyleSheet.create({
     height: 40,
     fontSize: 13,
     color: '#2D3748',
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
   },
   pickerContainer: {
     backgroundColor: '#FFFFFF',
@@ -489,7 +424,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2D3748',
     paddingHorizontal: 10,
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
   },
   passwordInputContainer: {
     flexDirection: 'row',
@@ -506,7 +441,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2D3748',
     height: '100%',
-    outlineStyle: 'none',
+    outlineStyle: 'none' as any,
   },
   registerBtn: {
     flexDirection: 'row',
